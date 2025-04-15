@@ -1,0 +1,40 @@
+[workspace]
+resolver = "2"
+
+members = [
+  "logger",
+  "net/signaling",
+  "net/runtime",
+  "net/websocket"
+]
+
+[workspace.dependencies]
+pawkit-net-signaling = { path = "./net/signaling" }
+pawkit-net-websocket = { path = "./net/websocket" }
+pawkit-logger = { path = "./logger" }
+
+just-webrtc = "0.2.0"
+tokio-tungstenite = { version = "0.26.2", features = ["native-tls"] }
+env_logger = "0.11.8"
+wasm-bindgen = "0.2.100"
+log = "0.4.27"
+serde = { version = "1.0.219", features = ["serde_derive"] }
+wasm-bindgen-futures = "0.4.50"
+console_log = { version = "1.0.0", features = ["color", "wasm-bindgen"] }
+futures-util = "0.3.31"
+
+[workspace.dependencies.web-sys]
+version = "0.3.77"
+features = [
+  "BinaryType",
+  "Blob",
+  "ErrorEvent",
+  "FileReader",
+  "MessageEvent",
+  "ProgressEvent",
+  "WebSocket",
+]
+
+[workspace.dependencies.tokio]
+version = "1.44.2"
+features = ["sync", "rt", "macros"]
