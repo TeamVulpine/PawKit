@@ -12,9 +12,6 @@ extern "C" {
 
 #ifdef __cplusplus
 }
-#endif
-
-#ifdef __cplusplus
 
 #include <string>
 
