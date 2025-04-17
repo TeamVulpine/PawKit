@@ -13,7 +13,7 @@ async fn main() {
         .await;
 
     while let Some(message) = sock.recv().await {
-        println!("{:?}", message);
+        pawkit_logger::info(&format!("{:?}", message));
     }
 }
 

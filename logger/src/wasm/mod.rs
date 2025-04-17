@@ -9,3 +9,7 @@ extern "C" {
 fn print(s: &str) {
     log(s);
 }
+
+pub(crate) macro ansi ($($first: tt $(, $rest: tt)* $(,)?)?) {
+    ""
+}
