@@ -28,8 +28,8 @@ extern "C" {
 #else
 
 #define LOGFUNC(cppname, cname) \
-    inline void cppname(std::string &fmt) { \
-        pawkit_logger_##cname(fmt.c_str()); \
+    inline void cppname(std::string &message) { \
+        pawkit_logger_##cname(message.c_str()); \
     }
 
 #endif
