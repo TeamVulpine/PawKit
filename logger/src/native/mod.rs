@@ -1,9 +1,43 @@
-use std::io::{stdout, Write};
+use std::{
+    fs::{create_dir_all, File, OpenOptions},
+    io::{stdout, BufWriter, Write},
+    path::PathBuf,
+    sync::{LazyLock, Mutex},
+};
 
-pub(crate) fn print(s: &str) {
+use chrono::Local;
+
+static LOG_FILE: LazyLock<Mutex<BufWriter<File>>> = LazyLock::new(|| {
+    let timestamp = Local::now().format("%Y.%m.%d at %H.%M.%S.txt").to_string();
+    let log_dir = PathBuf::from("logs");
+
+    create_dir_all(&log_dir).expect("Failed to create logs directory");
+
+    let filepath = log_dir.join(timestamp);
+
+    let file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(filepath)
+        .expect("Failed to open log file");
+
+    Mutex::new(BufWriter::new(file))
+});
+
+pub(crate) fn print_to_console(s: &str) {
     let mut stdout = stdout().lock();
     stdout.write(s.as_bytes()).unwrap();
     stdout.flush().unwrap();
+}
+
+pub(crate) fn print_to_logfile(s: &str) {
+    let mut file = LOG_FILE.lock().unwrap();
+    file.write_all(s.as_bytes()).unwrap();
+    file.flush().unwrap();
+}
+
+pub(crate) fn time_string() -> String {
+    Local::now().format("%Y-%m-%d %H:%M:%S").to_string()
 }
 
 pub(crate) macro ansi_code {

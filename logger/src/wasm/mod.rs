@@ -1,4 +1,5 @@
-pub use wasm_bindgen::prelude::*;
+use js_sys::Date;
+use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 extern "C" {
@@ -6,10 +7,16 @@ extern "C" {
     fn log(s: &str);
 }
 
-fn print(s: &str) {
+pub(crate) fn print_to_console(s: &str) {
     log(s);
 }
 
-pub(crate) macro ansi ($($first: tt $(, $rest: tt)* $(,)?)?) {
+pub(crate) fn print_to_logfile(_: &str) {}
+
+pub(crate) fn time_string() -> String {
+    Date::new_0().toISOString().into()
+}
+
+pub(crate) macro ansi($($first: tt $(, $rest: tt)* $(,)?)?) {
     ""
 }

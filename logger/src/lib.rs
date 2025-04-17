@@ -13,7 +13,9 @@ use wasm::*;
 use native::*;
 
 macro log_badge($prefix: tt, $badge: tt, $start: tt, $msg: tt, $end: tt) {
-    print(&format!(concat!(ansi!$prefix, "[", $badge, "]", ansi!$start, " {}\n", ansi!$end), $msg))
+    let time = time_string();
+    print_to_console(&format!(concat!(ansi!$prefix, "[", $badge, "]", ansi!$start, " {} | {}\n", ansi!$end), time, $msg));
+    print_to_logfile(&format!(concat!("[", $badge, "]", " {} | {}\n"), time, $msg));
 }
 
 pub fn info(s: &str) {

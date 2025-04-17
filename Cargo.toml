@@ -22,6 +22,7 @@ serde = { version = "1.0.219", features = ["serde_derive"] }
 wasm-bindgen-futures = "0.4.50"
 console_log = { version = "1.0.0", features = ["color", "wasm-bindgen"] }
 futures-util = "0.3.31"
+chrono = "0.4.40"
 
 [workspace.dependencies.web-sys]
 version = "0.3.77"
