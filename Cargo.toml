@@ -5,13 +5,15 @@ members = [
   "logger",
   "net/signaling",
   "net/runtime",
-  "net/websocket"
+  "net/websocket",
+  "fs"
 ]
 
 [workspace.dependencies]
 pawkit-net-signaling = { path = "./net/signaling" }
 pawkit-net-websocket = { path = "./net/websocket" }
 pawkit-logger = { path = "./logger" }
+pawkit-fs = { path = "./fs" }
 
 just-webrtc = "0.2.0"
 tokio-tungstenite = { version = "0.26.2", features = ["native-tls"] }
