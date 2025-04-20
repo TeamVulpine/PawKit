@@ -8,3 +8,4 @@ crate-type = ["staticlib", "rlib"]
 
 [dependencies]
 pawkit-logger.workspace = true
+serde.workspace = true
