@@ -11,6 +11,8 @@ pawkit-net-websocket.workspace = true
 serde.workspace = true
 tokio.workspace = true
 pawkit-logger.workspace = true
+futures-util.workspace = true
+serde_json.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tokio-tungstenite.workspace = true
