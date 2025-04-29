@@ -4,6 +4,8 @@ use tokio_tungstenite::{accept_async, tungstenite::Message, WebSocketStream};
 
 use crate::model::SignalMessage;
 
+mod socket;
+
 pub async fn start_server(addr: &str) -> tokio::io::Result<()> {
     let listener = TcpListener::bind(addr).await?;
 
@@ -22,10 +24,17 @@ pub async fn start_server(addr: &str) -> tokio::io::Result<()> {
     Ok(())
 }
 
-async fn send_message(sender: &mut SplitSink<WebSocketStream<TcpStream>, Message>, message: SignalMessage) -> Result<(), tokio_tungstenite::tungstenite::Error> {
+async fn send_message(
+    sender: &mut SplitSink<WebSocketStream<TcpStream>, Message>,
+    message: SignalMessage,
+) -> Result<(), tokio_tungstenite::tungstenite::Error> {
     println!("Sending message to client: {:#?}", message);
-    
-    sender.send(Message::Text(serde_json::to_string(&message).unwrap().into())).await
+
+    sender
+        .send(Message::Text(
+            serde_json::to_string(&message).unwrap().into(),
+        ))
+        .await
 }
 
 async fn handle_connection(ws_stream: WebSocketStream<TcpStream>) {
@@ -36,10 +45,7 @@ async fn handle_connection(ws_stream: WebSocketStream<TcpStream>) {
             match &msg {
                 Message::Text(text) => {
                     let message = serde_json::from_str::<SignalMessage>(&text).unwrap();
-                    println!(
-                        "Got message on server: {:#?}",
-                        message
-                    );
+                    println!("Got message on server: {:#?}", message);
 
                     send_message(&mut ws_sender, message).await.unwrap();
                 }
