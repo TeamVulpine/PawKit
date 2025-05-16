@@ -1,10 +1,16 @@
+use just_webrtc::types::{ICECandidate, SessionDescription};
 use serde::{Deserialize, Serialize};
+
+use crate::model::HostId;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum HostPeerMessageS2C {
     Registered {
-        /// TODO: make a GameId struct
-        game_id: String,
+        host_id: HostId,
+    },
+    ConnectionRequest {
+        offer: SessionDescription,
+        candidates: Vec<ICECandidate>,
     },
 }

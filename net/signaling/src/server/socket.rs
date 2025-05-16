@@ -15,6 +15,10 @@ pub struct ServerSocket {
 }
 
 impl ServerSocket {
+    pub fn new(sock: WebSocketStream<TcpStream>, send_mode: SendMode) -> Self {
+        return Self { sock, send_mode };
+    }
+
     pub async fn recv(&mut self) -> Option<SignalMessageC2S> {
         let msg = self.sock.next().await?.ok()?;
 

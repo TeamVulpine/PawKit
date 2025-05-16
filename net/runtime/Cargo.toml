@@ -7,4 +7,7 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+anyhow.workspace = true
+bytes.workspace = true
 just-webrtc.workspace = true
+tokio.workspace = true
