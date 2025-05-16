@@ -11,14 +11,11 @@ pub mod c2s;
 pub mod s2c;
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(tag = "type")]
-pub enum SignalMessage {
-    Test { message: String },
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 pub enum SignalingError {
     InvalidExpectedMessage,
+    UnknownClientId,
+    UnknownHostId,
+    InternalError,
 }
 
 #[derive(Debug, Clone)]

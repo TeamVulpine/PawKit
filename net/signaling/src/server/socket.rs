@@ -1,6 +1,6 @@
 use std::io::Cursor;
 
-use futures_util::{SinkExt, StreamExt};
+use futures_util::{stream::FusedStream, SinkExt, StreamExt};
 use tokio::net::TcpStream;
 use tokio_tungstenite::{tungstenite::Message, WebSocketStream};
 
@@ -17,6 +17,10 @@ pub struct ServerSocket {
 impl ServerSocket {
     pub fn new(sock: WebSocketStream<TcpStream>, send_mode: SendMode) -> Self {
         return Self { sock, send_mode };
+    }
+
+    pub fn running(&self) -> bool {
+        return !self.sock.is_terminated();
     }
 
     pub async fn recv(&mut self) -> Option<SignalMessageC2S> {

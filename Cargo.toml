@@ -8,7 +8,8 @@ members = [
   "net/websocket",
   "net/http",
   "fs",
-  "crockford"
+  "crockford",
+  "holy-array"
 ]
 
 [workspace.dependencies]
@@ -18,6 +19,7 @@ pawkit-net-http.path = "./net/htp"
 pawkit-logger.path = "./logger"
 pawkit-fs.path = "./fs"
 pawkit-crockford.path = "./crockford"
+pawkit-holy-array.path = "./holy-array"
 
 tokio-tungstenite.version = "0.26.2"
 tokio-tungstenite.features = ["native-tls"]

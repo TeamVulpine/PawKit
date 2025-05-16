@@ -9,8 +9,9 @@ pub enum HostPeerMessageS2C {
     Registered {
         host_id: HostId,
     },
-    ConnectionRequest {
+    ConnectionRequested {
         offer: SessionDescription,
         candidates: Vec<ICECandidate>,
+        client_id: usize,
     },
 }
