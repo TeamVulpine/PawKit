@@ -1,7 +1,8 @@
 use std::{
     collections::HashMap,
     random::random,
-    sync::{Arc, PoisonError, RwLock, RwLockReadGuard},
+    sync::{Arc, PoisonError, RwLockReadGuard},
+    time::Duration,
 };
 
 use just_webrtc::types::{ICECandidate, SessionDescription};
@@ -9,7 +10,11 @@ use pawkit_holy_array::HolyArray;
 use socket::ServerSocket;
 use tokio::{
     net::TcpListener,
-    sync::mpsc::{self, UnboundedSender},
+    sync::{
+        mpsc::{self, UnboundedSender},
+        RwLock,
+    },
+    time::sleep,
 };
 use tokio_tungstenite::accept_async;
 
@@ -50,15 +55,8 @@ impl SimpleSignalingServer {
         }));
     }
 
-    fn acquire_lobby(
-        &self,
-        game_id: u32,
-        send: UnboundedSender<HostPeerMessageS2C>,
-    ) -> Option<u32> {
-        let Ok(mut peers) = self.host_peers.write() else {
-            pawkit_logger::error("Cannot write to host_peers");
-            return None;
-        };
+    async fn acquire_lobby(&self, game_id: u32, send: UnboundedSender<HostPeerMessageS2C>) -> u32 {
+        let mut peers = self.host_peers.write().await;
 
         let lobby = loop {
             let lobby_id = random::<u32>();
@@ -72,75 +70,49 @@ impl SimpleSignalingServer {
 
         peers.insert(lobby, send);
 
-        return Some(lobby.lobby_id);
+        return lobby.lobby_id;
     }
 
-    fn release_lobby(&self, game_id: u32, lobby_id: u32) {
-        let Ok(mut peers) = self.host_peers.write() else {
-            pawkit_logger::error("Cannot write to host_peers");
-            return;
-        };
+    async fn release_lobby(&self, game_id: u32, lobby_id: u32) {
+        let mut peers = self.host_peers.write().await;
 
         peers.remove(&PackedGameLobby { game_id, lobby_id });
     }
 
-    fn get_lobby(
+    async fn get_lobby(
         &self,
         game_id: u32,
         lobby_id: u32,
-    ) -> Result<
-        Option<UnboundedSender<HostPeerMessageS2C>>,
-        PoisonError<
-            RwLockReadGuard<'_, HashMap<PackedGameLobby, UnboundedSender<HostPeerMessageS2C>>>,
-        >,
-    > {
-        let peers_result = self.host_peers.read();
-
-        let Ok(peers) = peers_result else {
-            pawkit_logger::error(&format!("{:#?}", peers_result));
-            let _unused = peers_result?;
-            unreachable!();
-        };
+    ) -> Option<UnboundedSender<HostPeerMessageS2C>> {
+        let peers = self.host_peers.read().await;
 
         let Some(peer) = peers.get(&PackedGameLobby { game_id, lobby_id }) else {
-            return Ok(None);
-        };
-
-        return Ok(Some(peer.clone()));
-    }
-
-    fn acquire_client(&self, send: UnboundedSender<ClientPeerMessageS2C>) -> Option<usize> {
-        let Ok(mut peers) = self.client_peers.write() else {
-            pawkit_logger::error("Cannot write to client_peers");
             return None;
         };
 
-        return Some(peers.acquire(send));
+        return Some(peer.clone());
     }
 
-    fn release_client(&self, client_id: usize) {
-        let Ok(mut peers) = self.client_peers.write() else {
-            pawkit_logger::error("Cannot write to client_peers");
-            return;
-        };
+    async fn acquire_client(&self, send: UnboundedSender<ClientPeerMessageS2C>) -> usize {
+        let mut peers = self.client_peers.write().await;
+
+        return peers.acquire(send);
+    }
+
+    async fn release_client(&self, client_id: usize) {
+        let mut peers = self.client_peers.write().await;
 
         peers.release(client_id);
     }
 
-    fn get_client_peer(
+    async fn get_client_peer(
         &self,
         client_id: usize,
     ) -> Result<
         Option<UnboundedSender<ClientPeerMessageS2C>>,
         PoisonError<RwLockReadGuard<'_, HolyArray<UnboundedSender<ClientPeerMessageS2C>>>>,
     > {
-        let peers_result = self.client_peers.read();
-
-        let Ok(peers) = peers_result else {
-            pawkit_logger::error(&format!("{:#?}", peers_result));
-            let _unused = peers_result?;
-            unreachable!();
-        };
+        let peers = self.client_peers.read().await;
 
         let Some(peer) = peers.get(client_id) else {
             return Ok(None);
@@ -152,20 +124,18 @@ impl SimpleSignalingServer {
     async fn host_peer(&self, mut socket: ServerSocket, game_id: u32) {
         let (send, mut recv) = mpsc::unbounded_channel::<HostPeerMessageS2C>();
 
-        let Some(lobby_id) = self.acquire_lobby(game_id, send) else {
-            socket
-                .send(SignalMessageS2C::Error {
-                    value: SignalingError::InternalError,
-                })
-                .await;
-            return;
-        };
+        let lobby_id = self.acquire_lobby(game_id, send).await;
 
         let host_id = HostId {
             server_url: self.server_url.clone(),
             lobby_id,
             shard_id: 0,
         };
+
+        pawkit_logger::info(&format!(
+            "Host peer connected with Game ID {} and Host ID {}",
+            game_id, host_id
+        ));
 
         socket
             .send(SignalMessageS2C::HostPeer {
@@ -185,13 +155,15 @@ impl SimpleSignalingServer {
                                     client_id,
                                 },
                         } => {
-                            let Ok(peer) = self.get_client_peer(client_id) else {
+                            let Ok(peer) = self.get_client_peer(client_id).await else {
                                 socket
                                     .send(SignalMessageS2C::Error {
                                         value: SignalingError::InternalError,
                                     })
                                     .await;
-                                self.release_lobby(game_id, lobby_id);
+
+                                pawkit_logger::info(&format!("Disconnecting host peer with Game ID {} and Host ID {}", game_id, host_id));
+                                self.release_lobby(game_id, lobby_id).await;
                                 return;
                             };
 
@@ -210,7 +182,9 @@ impl SimpleSignalingServer {
                                         value: SignalingError::InternalError,
                                     })
                                     .await;
-                                self.release_lobby(game_id, lobby_id);
+
+                                pawkit_logger::info(&format!("Disconnecting host peer with Game ID {} and Host ID {}", game_id, host_id));
+                                self.release_lobby(game_id, lobby_id).await;
                                 return;
                             }
                         }
@@ -223,13 +197,15 @@ impl SimpleSignalingServer {
                                     client_id,
                                 },
                         } => {
-                            let Ok(peer) = self.get_client_peer(client_id) else {
+                            let Ok(peer) = self.get_client_peer(client_id).await else {
                                 socket
                                     .send(SignalMessageS2C::Error {
                                         value: SignalingError::InternalError,
                                     })
                                     .await;
-                                self.release_lobby(game_id, lobby_id);
+
+                                pawkit_logger::info(&format!("Disconnecting host peer with Game ID {} and Host ID {}", game_id, host_id));
+                                self.release_lobby(game_id, lobby_id).await;
                                 return;
                             };
 
@@ -248,7 +224,9 @@ impl SimpleSignalingServer {
                                         value: SignalingError::InternalError,
                                     })
                                     .await;
-                                self.release_lobby(game_id, lobby_id);
+
+                                pawkit_logger::info(&format!("Disconnecting host peer with Game ID {} and Host ID {}", game_id, host_id));
+                                self.release_lobby(game_id, lobby_id).await;
                                 return;
                             }
                         }
@@ -267,11 +245,18 @@ impl SimpleSignalingServer {
                     socket.send(SignalMessageS2C::HostPeer { value: msg }).await;
                 }
 
+                _ = sleep(Duration::from_millis(500)) => {}
+
                 else => break
             }
         }
 
-        self.release_lobby(game_id, lobby_id);
+        pawkit_logger::info(&format!(
+            "Host peer with Game ID {} and Host ID {} disconnected.",
+            game_id, host_id
+        ));
+
+        self.release_lobby(game_id, lobby_id).await;
     }
 
     async fn client_peer(
@@ -284,24 +269,9 @@ impl SimpleSignalingServer {
     ) {
         let (send, mut recv) = mpsc::unbounded_channel::<ClientPeerMessageS2C>();
 
-        let Some(client_id) = self.acquire_client(send) else {
-            socket
-                .send(SignalMessageS2C::Error {
-                    value: SignalingError::InternalError,
-                })
-                .await;
-            return;
-        };
+        let client_id = self.acquire_client(send).await;
 
-        let Ok(peer) = self.get_lobby(game_id, host_id.lobby_id) else {
-            socket
-                .send(SignalMessageS2C::Error {
-                    value: SignalingError::InternalError,
-                })
-                .await;
-            self.release_client(client_id);
-            return;
-        };
+        let peer = self.get_lobby(game_id, host_id.lobby_id).await;
 
         let Some(peer) = peer else {
             socket
@@ -309,7 +279,7 @@ impl SimpleSignalingServer {
                     value: SignalingError::UnknownHostId,
                 })
                 .await;
-            self.release_client(client_id);
+            self.release_client(client_id).await;
             return;
         };
 
@@ -324,7 +294,7 @@ impl SimpleSignalingServer {
                     value: SignalingError::InternalError,
                 })
                 .await;
-            self.release_client(client_id);
+            self.release_client(client_id).await;
             return;
         }
 
@@ -336,15 +306,19 @@ impl SimpleSignalingServer {
                 .await;
         }
 
-        self.release_client(client_id);
+        self.release_client(client_id).await;
     }
 
     pub async fn start(self: Arc<Self>) {
         while let Ok((stream, _)) = self.listener.accept().await {
             let cloned = self.clone();
             tokio::spawn(async move {
-                let Ok(ws_stream) = accept_async(stream).await else {
-                    pawkit_logger::error("Websocket handshake failed");
+                let ws_res = accept_async(stream).await;
+                let Ok(ws_stream) = ws_res else {
+                    pawkit_logger::error(&format!(
+                        "Websocket handshake failed: {}",
+                        ws_res.unwrap_err()
+                    ));
                     return;
                 };
                 let mut socket = ServerSocket::new(ws_stream, crate::SendMode::Cbor);

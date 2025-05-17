@@ -8,15 +8,16 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 pawkit-net-websocket.workspace = true
-serde.workspace = true
-tokio.workspace = true
+pawkit-holy-array.workspace = true
 pawkit-logger.workspace = true
 pawkit-crockford.workspace = true
+
+serde.workspace = true
+tokio.workspace = true
 futures-util.workspace = true
 serde_json.workspace = true
 ciborium.workspace = true
 just-webrtc.workspace = true
-pawkit-holy-array.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tokio-tungstenite.workspace = true

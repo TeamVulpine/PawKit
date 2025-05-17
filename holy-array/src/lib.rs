@@ -1,3 +1,5 @@
+use std::{iter::FilterMap, slice::Iter};
+
 /// An array that allows holes in data, and automatically manages free slots
 #[derive(Debug)]
 pub struct HolyArray<T> {
@@ -44,5 +46,18 @@ impl<T> HolyArray<T> {
         };
 
         return Some(value);
+    }
+
+    pub fn len(&self) -> usize {
+        return self.data.len();
+    }
+}
+
+impl<'a, T> IntoIterator for &'a HolyArray<T> {
+    type Item = &'a T;
+    type IntoIter = FilterMap<Iter<'a, Option<T>>, fn(&'a Option<T>) -> Option<&'a T>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.data.iter().filter_map(|item| item.as_ref())
     }
 }

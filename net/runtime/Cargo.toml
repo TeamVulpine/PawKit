@@ -7,7 +7,13 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+pawkit-net-signaling.workspace = true
+pawkit-holy-array.workspace = true
+pawkit-logger.workspace = true
+
 anyhow.workspace = true
 bytes.workspace = true
 just-webrtc.workspace = true
 tokio.workspace = true
+wasm-bindgen-futures.workspace = true
+futures-util.workspace = true

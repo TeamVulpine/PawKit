@@ -27,10 +27,13 @@ pub struct HostId {
 
 fn shorten_server_url(server_url: &str) -> Option<&str> {
     const SUFFIX: &str = ".signaling.teamvulpine.com";
-    const PREFIX: &str = "wss://";
 
-    if let Some(hostname) = server_url.strip_prefix(PREFIX) {
-        if let Some(region) = hostname.strip_suffix(SUFFIX) {
+    if let Some(rest) = server_url.strip_prefix("wss://") {
+        if let Some(region) = rest.strip_suffix(SUFFIX) {
+            return Some(region);
+        }
+    } else if let Some(rest) = server_url.strip_prefix("ws://") {
+        if let Some(region) = rest.strip_suffix(SUFFIX) {
             return Some(region);
         }
     }
@@ -72,8 +75,12 @@ impl FromStr for HostId {
         let shard_id = u8::from_str_radix(shard_hex, 16).map_err(|_| "Invalid shard hex")?;
         let game_id = u32::from_crockford(game_crock).ok_or("Invalid Crockford game id")?;
 
-        let server_url = if server_input.contains('.') {
-            server_input.to_string()
+        let server_url = if server_input.contains('.') || server_input.contains(':') {
+            if server_input.starts_with("ws://") || server_input.starts_with("wss://") {
+                server_input.to_string()
+            } else {
+                format!("wss://{}", server_input)
+            }
         } else {
             format!("wss://{}.signaling.teamvulpine.com", server_input)
         };

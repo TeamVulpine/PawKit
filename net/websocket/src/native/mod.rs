@@ -13,7 +13,7 @@ impl Websocket {
         let (sock, _) = match connect_async(url).await {
             Ok(value) => value,
             Err(err) => {
-                eprintln!("{}", err);
+                pawkit_logger::error(&format!("{}", err));
                 return None;
             }
         };

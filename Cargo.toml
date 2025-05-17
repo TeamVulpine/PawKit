@@ -10,7 +10,7 @@ members = [
   "fs",
   "crockford",
   "holy-array"
-]
+, "bindings/c"]
 
 [workspace.dependencies]
 pawkit-net-signaling.path = "./net/signaling"
