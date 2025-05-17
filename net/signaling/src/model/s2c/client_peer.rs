@@ -8,4 +8,5 @@ pub enum ClientPeerMessageS2C {
         offer: SessionDescription,
         candidates: Vec<ICECandidate>,
     },
+    ConnectionRejected,
 }

@@ -84,9 +84,18 @@ impl SimpleSignalingServer {
         peers.remove(&PackedGameLobby { game_id, lobby_id });
     }
 
-    fn get_lobby(&self, game_id: u32, lobby_id: u32) -> Result<Option<UnboundedSender<HostPeerMessageS2C>>, PoisonError<RwLockReadGuard<'_, HashMap<PackedGameLobby, UnboundedSender<HostPeerMessageS2C>>>>> {
+    fn get_lobby(
+        &self,
+        game_id: u32,
+        lobby_id: u32,
+    ) -> Result<
+        Option<UnboundedSender<HostPeerMessageS2C>>,
+        PoisonError<
+            RwLockReadGuard<'_, HashMap<PackedGameLobby, UnboundedSender<HostPeerMessageS2C>>>,
+        >,
+    > {
         let peers_result = self.host_peers.read();
-        
+
         let Ok(peers) = peers_result else {
             pawkit_logger::error(&format!("{:#?}", peers_result));
             let _unused = peers_result?;
@@ -118,9 +127,15 @@ impl SimpleSignalingServer {
         peers.release(client_id);
     }
 
-    fn get_client_peer(&self, client_id: usize) -> Result<Option<UnboundedSender<ClientPeerMessageS2C>>, PoisonError<RwLockReadGuard<'_, HolyArray<UnboundedSender<ClientPeerMessageS2C>>>>> {
+    fn get_client_peer(
+        &self,
+        client_id: usize,
+    ) -> Result<
+        Option<UnboundedSender<ClientPeerMessageS2C>>,
+        PoisonError<RwLockReadGuard<'_, HolyArray<UnboundedSender<ClientPeerMessageS2C>>>>,
+    > {
         let peers_result = self.client_peers.read();
-        
+
         let Ok(peers) = peers_result else {
             pawkit_logger::error(&format!("{:#?}", peers_result));
             let _unused = peers_result?;
@@ -160,10 +175,46 @@ impl SimpleSignalingServer {
             })
             .await;
 
-        while socket.running() {
+        while socket.is_open() {
             tokio::select! {
                 Some(msg) = socket.recv() => {
                     match msg {
+                        SignalMessageC2S::HostPeer {
+                            value:
+                                HostPeerMessageC2S::RejectConnection {
+                                    client_id,
+                                },
+                        } => {
+                            let Ok(peer) = self.get_client_peer(client_id) else {
+                                socket
+                                    .send(SignalMessageS2C::Error {
+                                        value: SignalingError::InternalError,
+                                    })
+                                    .await;
+                                self.release_lobby(game_id, lobby_id);
+                                return;
+                            };
+
+                            let Some(peer) = peer else {
+                                socket
+                                    .send(SignalMessageS2C::Error {
+                                        value: SignalingError::UnknownClientId,
+                                    })
+                                    .await;
+                                continue;
+                            };
+
+                            if peer.send(ClientPeerMessageS2C::ConnectionRejected).is_err() {
+                                socket
+                                    .send(SignalMessageS2C::Error {
+                                        value: SignalingError::InternalError,
+                                    })
+                                    .await;
+                                self.release_lobby(game_id, lobby_id);
+                                return;
+                            }
+                        }
+
                         SignalMessageC2S::HostPeer {
                             value:
                                 HostPeerMessageC2S::AcceptConnection {
@@ -201,7 +252,7 @@ impl SimpleSignalingServer {
                                 return;
                             }
                         }
-                        
+
                         _ => {
                             socket
                                 .send(SignalMessageS2C::Error {
@@ -262,7 +313,11 @@ impl SimpleSignalingServer {
             return;
         };
 
-        if let Err(err) = peer.send(HostPeerMessageS2C::ConnectionRequested { offer, candidates, client_id }) {
+        if let Err(err) = peer.send(HostPeerMessageS2C::ConnectionRequested {
+            offer,
+            candidates,
+            client_id,
+        }) {
             pawkit_logger::error(&format!("{:#?}", err));
             socket
                 .send(SignalMessageS2C::Error {
@@ -273,8 +328,12 @@ impl SimpleSignalingServer {
             return;
         }
 
-        while socket.running() && let Some(msg) = recv.recv().await {
-            socket.send(SignalMessageS2C::ClientPeer { value: msg }).await;
+        while socket.is_open()
+            && let Some(msg) = recv.recv().await
+        {
+            socket
+                .send(SignalMessageS2C::ClientPeer { value: msg })
+                .await;
         }
 
         self.release_client(client_id);

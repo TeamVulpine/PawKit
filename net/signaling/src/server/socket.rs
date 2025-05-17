@@ -19,7 +19,7 @@ impl ServerSocket {
         return Self { sock, send_mode };
     }
 
-    pub fn running(&self) -> bool {
+    pub fn is_open(&self) -> bool {
         return !self.sock.is_terminated();
     }
 

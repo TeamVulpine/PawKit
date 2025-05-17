@@ -12,4 +12,7 @@ pub enum HostPeerMessageC2S {
         candidates: Vec<ICECandidate>,
         client_id: usize,
     },
+    RejectConnection {
+        client_id: usize,
+    },
 }
