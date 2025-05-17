@@ -42,7 +42,9 @@ web-sys.features = [
   "IdbObjectStore",
   "IdbOpenDbRequest",
   "IdbRequest",
-  "IdbCursorWithValue"
+  "IdbCursorWithValue",
+  "Window",
+  "Response"
 ]
 
 tokio.version = "1.45.0"
@@ -59,3 +61,5 @@ ciborium = "0.2.2"
 
 anyhow = "1.0.98"
 bytes = "1.10.1"
+
+reqwest = "0.12.15"

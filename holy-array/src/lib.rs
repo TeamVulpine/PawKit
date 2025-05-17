@@ -5,8 +5,6 @@ pub struct HolyArray<T> {
     free_slots: Vec<usize>,
 }
 
-unsafe impl<T> Send for HolyArray<T> where T: Send {}
-
 impl<T> HolyArray<T> {
     pub fn new() -> Self {
         return Self {
