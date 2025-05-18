@@ -20,7 +20,7 @@ unsafe fn move_to_heap<T>(value: T) -> *mut T {
     return Box::into_raw(Box::new(value));
 }
 
-unsafe fn free_from_heap<T>(value: *mut T) {
+unsafe fn drop_from_heap<T>(value: *mut T) {
     if !value.is_null() {
         drop(Box::from_raw(value));
     }
