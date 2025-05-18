@@ -44,7 +44,7 @@ pub enum NetHostPeerEvent {
     PeerConnected { peer_id: usize },
     PeerDisconnected { peer_id: usize },
     PacketRecieved { peer_id: usize, data: Vec<u8> },
-    HostIdUpdated { host_id: HostId },
+    HostIdUpdated,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -153,9 +153,7 @@ impl NetHostPeer {
             {
                 *self.host_id.write().await = signaling.host_id.clone();
             }
-            let _ = self.ev_dispatcher.send(NetHostPeerEvent::HostIdUpdated {
-                host_id: signaling.host_id.clone(),
-            });
+            let _ = self.ev_dispatcher.send(NetHostPeerEvent::HostIdUpdated);
         }
     }
 
@@ -192,9 +190,7 @@ impl NetHostPeer {
         {
             *self.host_id.write().await = signaling.host_id.clone();
         }
-        let _ = self.ev_dispatcher.send(NetHostPeerEvent::HostIdUpdated {
-            host_id: signaling.host_id.clone(),
-        });
+        let _ = self.ev_dispatcher.send(NetHostPeerEvent::HostIdUpdated);
 
         let mut tasks = FuturesUnordered::<Pin<Box<PacketFuture>>>::new();
 
@@ -271,16 +267,10 @@ pub struct SimpleNetHostPeer {
 }
 
 impl SimpleNetHostPeer {
-    pub fn create(
-        server_url: &str,
-        game_id: u32,
-    ) -> Option<Self> {
+    pub fn create(server_url: &str, game_id: u32) -> Option<Self> {
         let (raw_peer, ev_queue) = NetHostPeer::create(server_url, game_id)?;
 
-        return Some(Self {
-            raw_peer,
-            ev_queue
-        });
+        return Some(Self { raw_peer, ev_queue });
     }
 
     pub fn next_event(&mut self) -> Option<NetHostPeerEvent> {

@@ -15,6 +15,7 @@ members = [
 [workspace.dependencies]
 pawkit-net-signaling.path = "./net/signaling"
 pawkit-net-websocket.path = "./net/websocket"
+pawkit-net-runtime.path = "./net/runtime"
 pawkit-net-http.path = "./net/htp"
 pawkit-logger.path = "./logger"
 pawkit-fs.path = "./fs"
