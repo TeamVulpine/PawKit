@@ -24,7 +24,7 @@ use crate::model::{
     HostId, SignalingError,
 };
 
-mod socket;
+pub mod socket;
 
 #[derive(Hash, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 struct PackedGameLobby {

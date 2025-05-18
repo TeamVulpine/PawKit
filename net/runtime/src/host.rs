@@ -1,5 +1,6 @@
 use std::{
     future::Future,
+    ops::Deref,
     pin::Pin,
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -7,6 +8,7 @@ use std::{
     },
 };
 
+use bytes::Bytes;
 use futures_util::{stream::FuturesUnordered, StreamExt};
 use just_webrtc::{
     platform::Channel, types::PeerConnectionState, DataChannelExt, PeerConnectionExt,
@@ -78,6 +80,16 @@ impl NetHostPeer {
 
     pub fn get_host_id(&self) -> HostId {
         return self.host_id.blocking_read().clone();
+    }
+
+    pub fn send_packet(&self, client_id: usize, data: &[u8]) {
+        let clients = self.connected_clients.blocking_read();
+
+        let Some(client) = clients.get(client_id) else {
+            return;
+        };
+
+        let _ = RUNTIME.block_on(client.channel.send(&Bytes::copy_from_slice(data)));
     }
 
     async fn handle_candidate(
@@ -250,5 +262,45 @@ impl NetHostConnection {
         };
 
         return Some(data.to_vec());
+    }
+}
+
+pub struct SimpleNetHostPeer {
+    raw_peer: Arc<NetHostPeer>,
+    ev_queue: UnboundedReceiver<NetHostPeerEvent>,
+}
+
+impl SimpleNetHostPeer {
+    pub fn create(
+        server_url: &str,
+        game_id: u32,
+    ) -> Option<Self> {
+        let (raw_peer, ev_queue) = NetHostPeer::create(server_url, game_id)?;
+
+        return Some(Self {
+            raw_peer,
+            ev_queue
+        });
+    }
+
+    pub fn next_event(&mut self) -> Option<NetHostPeerEvent> {
+        if self.ev_queue.is_empty() {
+            return None;
+        }
+        return self.ev_queue.blocking_recv();
+    }
+}
+
+impl Drop for SimpleNetHostPeer {
+    fn drop(&mut self) {
+        self.shutdown();
+    }
+}
+
+impl Deref for SimpleNetHostPeer {
+    type Target = Arc<NetHostPeer>;
+
+    fn deref(&self) -> &Self::Target {
+        return &self.raw_peer;
     }
 }
