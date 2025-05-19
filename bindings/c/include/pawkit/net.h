@@ -44,14 +44,16 @@ namespace PawKit::Networking {
         friend struct NetHostPeer;
 
         private:
-        pawkit_net_host_event evt;
+        pawkit_net_host_event evt {nullptr};
 
-        NetHostPeerEvent(pawkit_net_host_event evt) {
-            this->evt = evt;
-        }
+        NetHostPeerEvent(pawkit_net_host_event evt) : evt(evt) {}
 
         public:
         NetHostPeerEvent() : evt(nullptr) {}
+
+        inline operator pawkit_net_host_event () const {
+            return evt;
+        }
 
         ~NetHostPeerEvent() {
             pawkit_net_host_event_free(evt);
@@ -64,12 +66,17 @@ namespace PawKit::Networking {
 
     struct NetHostPeer {
         private:
-        pawkit_net_host_peer peer;
+        pawkit_net_host_peer peer {nullptr};
 
         public:
-        inline NetHostPeer(std::string &&serverUrl, uint32_t gameId) {
-            peer = pawkit_net_host_peer_create(serverUrl.data(), gameId);
+        inline NetHostPeer(std::string &&serverUrl, uint32_t gameId) :
+            peer(pawkit_net_host_peer_create(serverUrl.data(), gameId))
+        {
             assert(peer != nullptr);
+        }
+
+        inline operator pawkit_net_host_peer () const {
+            return peer;
         }
 
         inline ~NetHostPeer() {
@@ -95,7 +102,7 @@ namespace PawKit::Networking {
                 return false;
 
             evt = NetHostPeerEvent(rawEvt);
-            
+
             return true;
         }
     };
