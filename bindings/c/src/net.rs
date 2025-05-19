@@ -1,4 +1,4 @@
-use std::{ffi::c_char, ptr::null_mut};
+use std::{ffi::c_char, ptr::{null, null_mut}};
 
 use pawkit_net_runtime::{NetHostPeerEvent, SimpleNetHostPeer};
 
@@ -67,15 +67,48 @@ unsafe extern "C" fn pawkit_net_host_event_free(evt: *mut NetHostPeerEvent) {
 
 const PEER_CONNECTED: i32 = 0;
 const PEER_DISCONNECTED: i32 = 1;
-const PACKET_RECIEVED: i32 = 2;
+const PACKET_RECEIVED: i32 = 2;
 const HOST_ID_UPDATED: i32 = 3;
 
 #[no_mangle]
 unsafe extern "C" fn pawkit_net_host_event_get_type(evt: *mut NetHostPeerEvent) -> i32 {
-    return match *evt {
+    if evt.is_null() {
+        return -1;
+    }
+
+    return match &*evt {
         NetHostPeerEvent::PeerConnected { peer_id: _ } => PEER_CONNECTED,
         NetHostPeerEvent::PeerDisconnected { peer_id: _ } => PEER_DISCONNECTED,
-        NetHostPeerEvent::PacketRecieved { peer_id: _, data: _ } => PACKET_RECIEVED,
+        NetHostPeerEvent::PacketReceived { peer_id: _, data: _ } => PACKET_RECEIVED,
         NetHostPeerEvent::HostIdUpdated => HOST_ID_UPDATED
     };
+}
+
+#[no_mangle]
+unsafe extern "C" fn pawkit_net_host_event_get_peer_id(evt: *mut NetHostPeerEvent) -> usize {
+    if evt.is_null() {
+        return usize::MAX;
+    }
+    
+    return match &*evt {
+        NetHostPeerEvent::PeerConnected { peer_id } => *peer_id,
+        NetHostPeerEvent::PeerDisconnected { peer_id } => *peer_id,
+        NetHostPeerEvent::PacketReceived { peer_id, data: _ } => *peer_id,
+        NetHostPeerEvent::HostIdUpdated => usize::MAX
+    };
+}
+
+#[no_mangle]
+unsafe extern "C" fn pawkit_net_host_event_get_data(evt: *mut NetHostPeerEvent, len: *mut usize) -> *const u8 {
+    if evt.is_null() || len.is_null() {
+        return null();
+    }
+
+    let NetHostPeerEvent::PacketReceived { peer_id: _, data } = &*evt else {
+        return null();
+    };
+
+    *len = data.len();
+    
+    return data.as_ptr();
 }

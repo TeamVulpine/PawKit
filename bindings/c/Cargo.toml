@@ -1,10 +1,10 @@
 [package]
-name = "pawkit-bindings-c"
+name = "pawkit"
 version = "0.1.0"
 edition = "2021"
 
 [lib]
-crate-type = ["staticlib"]
+crate-type = ["staticlib", "cdylib"]
 
 [dependencies]
 pawkit-logger.workspace = true

@@ -43,7 +43,7 @@ struct NetHostConnection {
 pub enum NetHostPeerEvent {
     PeerConnected { peer_id: usize },
     PeerDisconnected { peer_id: usize },
-    PacketRecieved { peer_id: usize, data: Vec<u8> },
+    PacketReceived { peer_id: usize, data: Vec<u8> },
     HostIdUpdated,
 }
 
@@ -220,7 +220,7 @@ impl NetHostPeer {
 
                     let _ = self
                         .ev_dispatcher
-                        .send(NetHostPeerEvent::PacketRecieved { peer_id, data: packet });
+                        .send(NetHostPeerEvent::PacketReceived { peer_id, data: packet });
 
                     self.add_packet_task(&tasks, peer_id).await;
                 }

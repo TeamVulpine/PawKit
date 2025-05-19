@@ -45,5 +45,3 @@ namespace PawKit::Logger {
 #undef LOGFUNC
 
 #endif
-
-#undef NAMESPACE
