@@ -44,6 +44,8 @@ struct PackedGameLobby {
 ///
 /// Does not provide utilities for clustering,
 /// and does not proxy connection requests to other signaling addresses.
+///
+/// Intended as a reference implementation, or to get a working server set up quickly.
 pub struct SimpleSignalingServer {
     listener: TcpListener,
     tls_acceptor: Option<TlsAcceptor>,
@@ -390,21 +392,29 @@ impl SimpleSignalingServer {
         }
     }
 
-    async fn accept_stream(&self, stream: TcpStream) -> MaybeTlsStream<TcpStream> {
+    async fn accept_stream(&self, stream: TcpStream) -> Option<MaybeTlsStream<TcpStream>> {
         if let Some(tls_acceptor) = &self.tls_acceptor {
-            return MaybeTlsStream::NativeTls(tls_acceptor.accept(stream).await.unwrap());
+            return Some(MaybeTlsStream::NativeTls(
+                tls_acceptor
+                    .accept(stream)
+                    .await
+                    .inspect_err(|err| {
+                        pawkit_logger::error(&format!("TLS handshake failed: {:#?}", err))
+                    })
+                    .ok()?,
+            ));
         }
 
-        return MaybeTlsStream::Plain(stream);
+        return Some(MaybeTlsStream::Plain(stream));
     }
 
     pub async fn start(self: Arc<Self>) {
         while let Ok((stream, _)) = self.listener.accept().await {
             let cloned = self.clone();
             tokio::spawn(async move {
-                cloned
-                    .socket_thread(cloned.accept_stream(stream).await)
-                    .await;
+                if let Some(stream) = cloned.accept_stream(stream).await {
+                    cloned.socket_thread(stream).await;
+                }
             });
         }
     }
