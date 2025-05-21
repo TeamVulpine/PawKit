@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    env,
     random::random,
     sync::{Arc, PoisonError, RwLockReadGuard},
     time::Duration,
@@ -9,6 +10,8 @@ use just_webrtc::types::{ICECandidate, SessionDescription};
 use pawkit_holy_array::HolyArray;
 use socket::ServerSocket;
 use tokio::{
+    fs::File,
+    io::AsyncReadExt,
     net::{TcpListener, TcpStream},
     sync::{
         mpsc::{self, UnboundedSender},
@@ -16,7 +19,11 @@ use tokio::{
     },
     time::sleep,
 };
-use tokio_tungstenite::accept_async;
+use tokio_native_tls::{
+    native_tls::{self, Identity},
+    TlsAcceptor,
+};
+use tokio_tungstenite::{accept_async, MaybeTlsStream};
 
 use crate::model::{
     c2s::{client_peer::ClientPeerMessageC2S, host_peer::HostPeerMessageC2S, SignalMessageC2S},
@@ -33,22 +40,50 @@ struct PackedGameLobby {
 }
 
 /// A simple signaling server.
+/// Has support for TLS using the env vars PAWKIT_SIGNALING_TLS_PATH and PAWKIT_SIGNALING_TLS_PASS
 ///
 /// Does not provide utilities for clustering,
 /// and does not proxy connection requests to other signaling addresses.
 pub struct SimpleSignalingServer {
     listener: TcpListener,
+    tls_acceptor: Option<TlsAcceptor>,
     server_url: String,
     host_peers: RwLock<HashMap<PackedGameLobby, UnboundedSender<HostPeerMessageS2C>>>,
     client_peers: RwLock<HolyArray<UnboundedSender<ClientPeerMessageS2C>>>,
 }
 
+async fn load_tls_acceptor(pfx_path: &str, password: &str) -> Option<TlsAcceptor> {
+    let mut file = File::open(pfx_path).await.ok()?;
+    let mut identity = vec![];
+    file.read_to_end(&mut identity).await.ok()?;
+
+    let identity = Identity::from_pkcs12(&identity, password).ok()?;
+    let acceptor = native_tls::TlsAcceptor::builder(identity).build().ok()?;
+
+    return Some(TlsAcceptor::from(acceptor));
+}
+
 impl SimpleSignalingServer {
+    const PATH_ENV: &str = "PAWKIT_SIGNALING_TLS_PATH";
+    const PASS_ENV: &str = "PAWKIT_SIGNALING_TLS_PASS";
+
     pub async fn new(addr: &str, server_url: String) -> Option<Arc<Self>> {
         let listener = TcpListener::bind(addr).await.ok()?;
 
+        let tls_path = env::var(Self::PATH_ENV).ok();
+        let tls_password = env::var(Self::PASS_ENV).ok();
+
+        let tls_acceptor = if let Some(tls_path) = tls_path
+            && let Some(tls_password) = tls_password
+        {
+            load_tls_acceptor(&tls_path, &tls_password).await
+        } else {
+            None
+        };
+
         return Some(Arc::new(Self {
             listener,
+            tls_acceptor,
             server_url,
             host_peers: RwLock::new(HashMap::new()),
             client_peers: RwLock::new(HolyArray::new()),
@@ -309,7 +344,7 @@ impl SimpleSignalingServer {
         self.release_client(client_id).await;
     }
 
-    async fn socket_thread(&self, stream: TcpStream) {
+    async fn socket_thread(&self, stream: MaybeTlsStream<TcpStream>) {
         let ws_res = accept_async(stream).await;
         let Ok(ws_stream) = ws_res else {
             pawkit_logger::error(&format!(
@@ -355,11 +390,21 @@ impl SimpleSignalingServer {
         }
     }
 
+    async fn accept_stream(&self, stream: TcpStream) -> MaybeTlsStream<TcpStream> {
+        if let Some(tls_acceptor) = &self.tls_acceptor {
+            return MaybeTlsStream::NativeTls(tls_acceptor.accept(stream).await.unwrap());
+        }
+
+        return MaybeTlsStream::Plain(stream);
+    }
+
     pub async fn start(self: Arc<Self>) {
         while let Ok((stream, _)) = self.listener.accept().await {
             let cloned = self.clone();
             tokio::spawn(async move {
-                cloned.socket_thread(stream).await;
+                cloned
+                    .socket_thread(cloned.accept_stream(stream).await)
+                    .await;
             });
         }
     }

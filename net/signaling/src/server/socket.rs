@@ -2,7 +2,7 @@ use std::io::Cursor;
 
 use futures_util::{stream::FusedStream, SinkExt, StreamExt};
 use tokio::net::TcpStream;
-use tokio_tungstenite::{tungstenite::Message, WebSocketStream};
+use tokio_tungstenite::{tungstenite::Message, MaybeTlsStream, WebSocketStream};
 
 use crate::{
     model::{c2s::SignalMessageC2S, s2c::SignalMessageS2C},
@@ -10,12 +10,12 @@ use crate::{
 };
 
 pub struct ServerSocket {
-    sock: WebSocketStream<TcpStream>,
+    sock: WebSocketStream<MaybeTlsStream<TcpStream>>,
     send_mode: SendMode,
 }
 
 impl ServerSocket {
-    pub fn new(sock: WebSocketStream<TcpStream>, send_mode: SendMode) -> Self {
+    pub fn new(sock: WebSocketStream<MaybeTlsStream<TcpStream>>, send_mode: SendMode) -> Self {
         return Self { sock, send_mode };
     }
 
