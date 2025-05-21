@@ -1,4 +1,7 @@
-use std::{ffi::c_char, ptr::{null, null_mut}};
+use std::{
+    ffi::c_char,
+    ptr::{null, null_mut},
+};
 
 use pawkit_net_runtime::{NetHostPeerEvent, SimpleNetHostPeer};
 
@@ -44,7 +47,9 @@ unsafe extern "C" fn pawkit_net_host_peer_send_packet(
 }
 
 #[no_mangle]
-unsafe extern "C" fn pawkit_net_host_poll_event(peer: *mut SimpleNetHostPeer) -> *mut NetHostPeerEvent {
+unsafe extern "C" fn pawkit_net_host_poll_event(
+    peer: *mut SimpleNetHostPeer,
+) -> *mut NetHostPeerEvent {
     if peer.is_null() {
         return null_mut();
     }
@@ -79,8 +84,11 @@ unsafe extern "C" fn pawkit_net_host_event_get_type(evt: *mut NetHostPeerEvent) 
     return match &*evt {
         NetHostPeerEvent::PeerConnected { peer_id: _ } => PEER_CONNECTED,
         NetHostPeerEvent::PeerDisconnected { peer_id: _ } => PEER_DISCONNECTED,
-        NetHostPeerEvent::PacketReceived { peer_id: _, data: _ } => PACKET_RECEIVED,
-        NetHostPeerEvent::HostIdUpdated => HOST_ID_UPDATED
+        NetHostPeerEvent::PacketReceived {
+            peer_id: _,
+            data: _,
+        } => PACKET_RECEIVED,
+        NetHostPeerEvent::HostIdUpdated => HOST_ID_UPDATED,
     };
 }
 
@@ -89,17 +97,20 @@ unsafe extern "C" fn pawkit_net_host_event_get_peer_id(evt: *mut NetHostPeerEven
     if evt.is_null() {
         return usize::MAX;
     }
-    
+
     return match &*evt {
         NetHostPeerEvent::PeerConnected { peer_id } => *peer_id,
         NetHostPeerEvent::PeerDisconnected { peer_id } => *peer_id,
         NetHostPeerEvent::PacketReceived { peer_id, data: _ } => *peer_id,
-        NetHostPeerEvent::HostIdUpdated => usize::MAX
+        NetHostPeerEvent::HostIdUpdated => usize::MAX,
     };
 }
 
 #[no_mangle]
-unsafe extern "C" fn pawkit_net_host_event_get_data(evt: *mut NetHostPeerEvent, len: *mut usize) -> *const u8 {
+unsafe extern "C" fn pawkit_net_host_event_get_data(
+    evt: *mut NetHostPeerEvent,
+    len: *mut usize,
+) -> *const u8 {
     if evt.is_null() || len.is_null() {
         return null();
     }
@@ -109,6 +120,6 @@ unsafe extern "C" fn pawkit_net_host_event_get_data(evt: *mut NetHostPeerEvent, 
     };
 
     *len = data.len();
-    
+
     return data.as_ptr();
 }

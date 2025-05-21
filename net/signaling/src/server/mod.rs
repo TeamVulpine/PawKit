@@ -9,7 +9,7 @@ use just_webrtc::types::{ICECandidate, SessionDescription};
 use pawkit_holy_array::HolyArray;
 use socket::ServerSocket;
 use tokio::{
-    net::TcpListener,
+    net::{TcpListener, TcpStream},
     sync::{
         mpsc::{self, UnboundedSender},
         RwLock,
@@ -309,54 +309,57 @@ impl SimpleSignalingServer {
         self.release_client(client_id).await;
     }
 
+    async fn socket_thread(&self, stream: TcpStream) {
+        let ws_res = accept_async(stream).await;
+        let Ok(ws_stream) = ws_res else {
+            pawkit_logger::error(&format!(
+                "Websocket handshake failed: {}",
+                ws_res.unwrap_err()
+            ));
+            return;
+        };
+        let mut socket = ServerSocket::new(ws_stream, crate::SendMode::Cbor);
+
+        let Some(message) = socket.recv().await else {
+            pawkit_logger::debug("Websocket connection closed before sending any messages");
+            return;
+        };
+
+        match message {
+            SignalMessageC2S::HostPeer {
+                value: HostPeerMessageC2S::Register { game_id },
+            } => {
+                self.host_peer(socket, game_id).await;
+            }
+
+            SignalMessageC2S::ClientPeer {
+                value:
+                    ClientPeerMessageC2S::RequestConnection {
+                        game_id,
+                        host_id,
+                        offer,
+                        candidates,
+                    },
+            } => {
+                self.client_peer(socket, game_id, host_id, offer, candidates)
+                    .await;
+            }
+
+            _ => {
+                socket
+                    .send(SignalMessageS2C::Error {
+                        value: SignalingError::InvalidExpectedMessage,
+                    })
+                    .await;
+            }
+        }
+    }
+
     pub async fn start(self: Arc<Self>) {
         while let Ok((stream, _)) = self.listener.accept().await {
             let cloned = self.clone();
             tokio::spawn(async move {
-                let ws_res = accept_async(stream).await;
-                let Ok(ws_stream) = ws_res else {
-                    pawkit_logger::error(&format!(
-                        "Websocket handshake failed: {}",
-                        ws_res.unwrap_err()
-                    ));
-                    return;
-                };
-                let mut socket = ServerSocket::new(ws_stream, crate::SendMode::Cbor);
-
-                let Some(message) = socket.recv().await else {
-                    pawkit_logger::debug("Websocket connection closed before sending any messages");
-                    return;
-                };
-
-                match message {
-                    SignalMessageC2S::HostPeer {
-                        value: HostPeerMessageC2S::Register { game_id },
-                    } => {
-                        cloned.host_peer(socket, game_id).await;
-                    }
-
-                    SignalMessageC2S::ClientPeer {
-                        value:
-                            ClientPeerMessageC2S::RequestConnection {
-                                game_id,
-                                host_id,
-                                offer,
-                                candidates,
-                            },
-                    } => {
-                        cloned
-                            .client_peer(socket, game_id, host_id, offer, candidates)
-                            .await;
-                    }
-
-                    _ => {
-                        socket
-                            .send(SignalMessageS2C::Error {
-                                value: SignalingError::InvalidExpectedMessage,
-                            })
-                            .await;
-                    }
-                }
+                cloned.socket_thread(stream).await;
             });
         }
     }
