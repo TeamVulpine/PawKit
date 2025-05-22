@@ -136,22 +136,22 @@ impl SimpleSignalingServer {
         return peers.acquire(send);
     }
 
-    async fn release_client(&self, client_id: usize) {
+    async fn release_client(&self, client_id: u64) {
         let mut peers = self.client_peers.write().await;
 
-        peers.release(client_id);
+        peers.release(client_id as usize);
     }
 
     async fn get_client_peer(
         &self,
-        client_id: usize,
+        client_id: u64,
     ) -> Result<
         Option<UnboundedSender<ClientPeerMessageS2C>>,
         PoisonError<RwLockReadGuard<'_, HolyArray<UnboundedSender<ClientPeerMessageS2C>>>>,
     > {
         let peers = self.client_peers.read().await;
 
-        let Some(peer) = peers.get(client_id) else {
+        let Some(peer) = peers.get(client_id as usize) else {
             return Ok(None);
         };
 
@@ -306,7 +306,7 @@ impl SimpleSignalingServer {
     ) {
         let (send, mut recv) = mpsc::unbounded_channel::<ClientPeerMessageS2C>();
 
-        let client_id = self.acquire_client(send).await;
+        let client_id = self.acquire_client(send).await as u64;
 
         let peer = self.get_lobby(game_id, host_id.lobby_id).await;
 

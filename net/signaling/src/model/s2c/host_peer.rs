@@ -12,6 +12,6 @@ pub enum HostPeerMessageS2C {
     ConnectionRequested {
         offer: SessionDescription,
         candidates: Vec<ICECandidate>,
-        client_id: usize,
+        client_id: u64,
     },
 }

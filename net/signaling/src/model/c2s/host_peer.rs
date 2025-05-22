@@ -17,9 +17,9 @@ pub enum HostPeerMessageC2S {
     AcceptConnection {
         offer: SessionDescription,
         candidates: Vec<ICECandidate>,
-        client_id: usize,
+        client_id: u64,
     },
     RejectConnection {
-        client_id: usize,
+        client_id: u64,
     },
 }

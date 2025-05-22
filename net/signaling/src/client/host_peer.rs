@@ -15,7 +15,7 @@ pub struct HostPeerSignalingClient {
 pub struct ClientConnectionCandidate {
     pub offer: SessionDescription,
     pub candidates: Vec<ICECandidate>,
-    pub client_id: usize,
+    pub client_id: u64,
 }
 
 impl HostPeerSignalingClient {
@@ -63,7 +63,7 @@ impl HostPeerSignalingClient {
 
     pub async fn accept_candidate(
         &mut self,
-        client_id: usize,
+        client_id: u64,
         offer: SessionDescription,
         candidates: Vec<ICECandidate>,
     ) {
@@ -78,7 +78,7 @@ impl HostPeerSignalingClient {
             .await;
     }
 
-    pub async fn reject_candidate(&mut self, client_id: usize) {
+    pub async fn reject_candidate(&mut self, client_id: u64) {
         self.sock
             .send(SignalMessageC2S::HostPeer {
                 value: HostPeerMessageC2S::RejectConnection { client_id },
