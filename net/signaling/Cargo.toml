@@ -3,7 +3,7 @@ name = "pawkit-net-signaling"
 version = "0.1.0"
 edition = "2021"
 license = "MPL-2.0"
-homepage = "htpps://teamvulpine.com"
+homepage = "https://teamvulpine.com"
 repository = "https://github.com/TeamVulpine/PawKit/tree/main/net/signaling"
 description = "Provides the signaling functionality for PawKit's WebRTC networking."
 

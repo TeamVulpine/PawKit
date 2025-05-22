@@ -3,7 +3,7 @@ name = "pawkit-logger"
 version = "0.1.0"
 edition = "2021"
 license = "MPL-2.0"
-homepage = "htpps://teamvulpine.com"
+homepage = "https://teamvulpine.com"
 repository = "https://github.com/TeamVulpine/PawKit/tree/main/logger"
 description = "PawKit's logging module"
 
