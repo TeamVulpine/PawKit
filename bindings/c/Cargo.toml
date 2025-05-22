@@ -1,11 +1,15 @@
 [package]
-name = "pawkit"
+name = "pawkit-c"
 version = "0.1.0"
 edition = "2021"
+license = "MPL-2.0"
+homepage = "htpps://teamvulpine.com"
+repository = "https://github.com/TeamVulpine/PawKit/tree/main/bindings/c"
+description = "PawKit's C(++) bindings"
 
 [lib]
 crate-type = ["staticlib", "cdylib"]
 
 [dependencies]
 pawkit-logger.workspace = true
-pawkit-net-runtime.workspace = true
+pawkit-net.workspace = true

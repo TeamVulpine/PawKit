@@ -14,13 +14,28 @@ members = [
 
 [workspace.dependencies]
 pawkit-net-signaling.path = "./net/signaling"
+pawkit-net-signaling.version = "0.1.0"
+
 pawkit-net-websocket.path = "./net/websocket"
-pawkit-net-runtime.path = "./net/runtime"
+pawkit-net-websocket.version = "0.1.0"
+
+pawkit-net.path = "./net/runtime"
+pawkit-net.version = "0.1.0"
+
 pawkit-net-http.path = "./net/htp"
+pawkit-net-http.version = "0.1.0"
+
 pawkit-logger.path = "./logger"
+pawkit-logger.version = "0.1.0"
+
 pawkit-fs.path = "./fs"
+pawkit-fs.version = "0.1.0"
+
 pawkit-crockford.path = "./crockford"
+pawkit-crockford.version = "0.1.0"
+
 pawkit-holy-array.path = "./holy-array"
+pawkit-holy-array.version = "0.1.0"
 
 tokio-tungstenite.version = "0.26.2"
 tokio-tungstenite.features = ["native-tls"]

@@ -1,10 +1,9 @@
 use std::{
-    future::Future,
     ops::Deref,
     pin::Pin,
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc, LazyLock,
+        Arc,
     },
 };
 
@@ -19,24 +18,19 @@ use pawkit_net_signaling::{
     client::{ClientConnectionCandidate, HostPeerSignalingClient},
     model::HostId,
 };
-use tokio::{
-    runtime::Runtime,
-    sync::{
-        mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
-        RwLock,
-    },
+use tokio::sync::{
+    mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
+    RwLock,
 };
 
+use crate::{recieve_packet, PacketFuture, RUNTIME};
+
 pub struct NetHostPeer {
-    connected_clients: RwLock<HolyArray<Arc<NetHostConnection>>>,
+    connected_clients: RwLock<HolyArray<Arc<Channel>>>,
     ev_dispatcher: UnboundedSender<NetHostPeerEvent>,
     running: AtomicBool,
     game_id: u32,
     host_id: RwLock<HostId>,
-}
-
-struct NetHostConnection {
-    pub channel: Channel,
 }
 
 #[derive(Debug)]
@@ -46,13 +40,6 @@ pub enum NetHostPeerEvent {
     PacketReceived { peer_id: usize, data: Vec<u8> },
     HostIdUpdated,
 }
-
-#[cfg(not(target_arch = "wasm32"))]
-type PacketFuture = dyn Future<Output = (Option<Vec<u8>>, usize)> + Send + Sync;
-#[cfg(target_arch = "wasm32")]
-type PacketFuture = dyn Future<Output = (Option<Vec<u8>>, usize)>;
-
-static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| Runtime::new().unwrap());
 
 impl NetHostPeer {
     pub fn create(
@@ -89,7 +76,7 @@ impl NetHostPeer {
             return;
         };
 
-        let _ = RUNTIME.block_on(client.channel.send(&Bytes::copy_from_slice(data)));
+        let _ = RUNTIME.block_on(client.send(&Bytes::copy_from_slice(data)));
     }
 
     async fn handle_candidate(
@@ -128,7 +115,7 @@ impl NetHostPeer {
             return None;
         };
 
-        let peer_id = connected_clients.acquire(Arc::new(NetHostConnection { channel }));
+        let peer_id = connected_clients.acquire(Arc::new(channel));
 
         let _ = self
             .ev_dispatcher
@@ -169,7 +156,9 @@ impl NetHostPeer {
         };
 
         let peer = peer.clone();
-        tasks.push(Box::pin(async move { (peer.next_packet().await, peer_id) }));
+        tasks.push(Box::pin(
+            async move { (recieve_packet(&peer).await, peer_id) },
+        ));
     }
 
     async fn worker_loop(&self) {
@@ -248,16 +237,6 @@ impl NetHostPeer {
         wasm_bindgen_futures::spawn_local(async move {
             self.worker_loop().await;
         });
-    }
-}
-
-impl NetHostConnection {
-    async fn next_packet(&self) -> Option<Vec<u8>> {
-        let Ok(data) = self.channel.receive().await else {
-            return None;
-        };
-
-        return Some(data.to_vec());
     }
 }
 

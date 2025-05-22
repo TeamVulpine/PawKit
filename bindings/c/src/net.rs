@@ -3,7 +3,7 @@ use std::{
     ptr::{null, null_mut},
 };
 
-use pawkit_net_runtime::{NetHostPeerEvent, SimpleNetHostPeer};
+use pawkit_net::{NetHostPeerEvent, SimpleNetHostPeer};
 
 use crate::{cstr_to_str, drop_from_heap, move_to_heap, ptr_to_slice};
 
