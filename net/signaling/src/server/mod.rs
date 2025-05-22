@@ -364,7 +364,7 @@ impl SimpleSignalingServer {
 
         match message {
             SignalMessageC2S::HostPeer {
-                value: HostPeerMessageC2S::Register { game_id },
+                value: HostPeerMessageC2S::Register { game_id, request_proxy: _ },
             } => {
                 self.host_peer(socket, game_id).await;
             }
