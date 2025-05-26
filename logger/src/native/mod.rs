@@ -7,6 +7,8 @@ use std::{
 
 use chrono::Local;
 
+use crate::LoggerCallback;
+
 static LOG_FILE: LazyLock<Mutex<BufWriter<File>>> = LazyLock::new(|| {
     let timestamp = Local::now().format("%Y.%m.%d at %H.%M.%S.txt").to_string();
     let log_dir = PathBuf::from("logs");
@@ -24,16 +26,20 @@ static LOG_FILE: LazyLock<Mutex<BufWriter<File>>> = LazyLock::new(|| {
     Mutex::new(BufWriter::new(file))
 });
 
-pub(crate) fn print_to_console(s: &str) {
-    let mut stdout = stdout().lock();
-    stdout.write(s.as_bytes()).unwrap();
-    stdout.flush().unwrap();
-}
+pub struct DefaultLoggerCallback;
 
-pub(crate) fn print_to_logfile(s: &str) {
-    let mut file = LOG_FILE.lock().unwrap();
-    file.write_all(s.as_bytes()).unwrap();
-    file.flush().unwrap();
+impl LoggerCallback for DefaultLoggerCallback {
+    fn print_to_console(&self, s: &str) {
+        let mut stdout = stdout().lock();
+        stdout.write(s.as_bytes()).unwrap();
+        stdout.flush().unwrap();
+    }
+
+    fn print_to_logfile(&self, s: &str) {
+        let mut file = LOG_FILE.lock().unwrap();
+        file.write_all(s.as_bytes()).unwrap();
+        file.flush().unwrap();
+    }
 }
 
 pub(crate) fn time_string() -> String {

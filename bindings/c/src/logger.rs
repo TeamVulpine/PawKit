@@ -1,6 +1,71 @@
 use std::ffi::c_char;
 
-use crate::cstr_to_str;
+use pawkit_logger::{DefaultLoggerCallback, LoggerCallback};
+
+use crate::{cstr_to_str, disown_str_to_cstr, drop_cstr};
+
+#[repr(C)]
+struct CLoggerCallback {
+    print_to_console: Option<extern "C" fn(*const c_char)>,
+    print_to_logfile: Option<extern "C" fn(*const c_char)>,
+}
+
+impl LoggerCallback for CLoggerCallback {
+    fn print_to_console(&self, s: &str) {
+        let Some(print) = self.print_to_logfile else {
+            DefaultLoggerCallback.print_to_console(s);
+            return;
+        };
+
+        unsafe {
+            let cstr = disown_str_to_cstr(s);
+        
+            print(cstr);
+
+            drop_cstr(cstr);
+        }
+    }
+
+    fn print_to_logfile(&self, s: &str) {
+        let Some(print) = self.print_to_logfile else {
+            return;
+        };
+
+        unsafe {
+            let cstr = disown_str_to_cstr(s);
+        
+            print(cstr);
+
+            drop_cstr(cstr);
+        }
+    }
+}
+
+#[no_mangle]
+unsafe extern "C" fn pawkit_logger_set_logger_callback(callback: CLoggerCallback) {
+    pawkit_logger::set_logger_callback(Box::new(callback));
+}
+
+#[no_mangle]
+unsafe extern "C" fn pawkit_logger_reset_logger_callback() {
+    pawkit_logger::set_logger_callback(Box::new(DefaultLoggerCallback));
+}
+
+#[no_mangle]
+unsafe extern "C" fn pawkit_logger_print_to_console(message: *const c_char) {
+    let Some(message) = cstr_to_str(message) else {
+        return;
+    };
+    pawkit_logger::print_to_console(message);
+}
+
+#[no_mangle]
+unsafe extern "C" fn pawkit_logger_print_to_logfile(message: *const c_char) {
+    let Some(message) = cstr_to_str(message) else {
+        return;
+    };
+    pawkit_logger::print_to_logfile(message);
+}
 
 #[no_mangle]
 unsafe extern "C" fn pawkit_logger_info(message: *const c_char) {

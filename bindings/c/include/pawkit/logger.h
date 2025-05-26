@@ -1,14 +1,26 @@
 #pragma once
 
+#include "util.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-    void pawkit_logger_info(char const *message);
-    void pawkit_logger_debug(char const *message);
-    void pawkit_logger_warn(char const *message);
-    void pawkit_logger_error(char const *message);
-    void pawkit_logger_fatal(char const *message);
+typedef PAWKIT_CDECL void (*pawkit_logger_callback_fn)(const char* message);
+
+typedef struct pawkit_logger_callback_t {
+    pawkit_logger_callback_fn print_to_console;
+    pawkit_logger_callback_fn print_to_logfile;
+} pawkit_logger_callback;
+
+void pawkit_logger_set_logger_callback(pawkit_logger_callback callback);
+void pawkit_logger_reset_logger_callback();
+
+void pawkit_logger_info(char const *message);
+void pawkit_logger_debug(char const *message);
+void pawkit_logger_warn(char const *message);
+void pawkit_logger_error(char const *message);
+void pawkit_logger_fatal(char const *message);
 
 #ifdef __cplusplus
 }
@@ -35,6 +47,14 @@ extern "C" {
 #endif
 
 namespace PawKit::Logger {
+    inline void SetLoggerCallback(pawkit_logger_callback callback) {
+        pawkit_logger_set_logger_callback(callback);
+    }
+
+    inline void ResetLoggerCallback() {
+        pawkit_logger_reset_logger_callback();
+    }
+
     LOGFUNC(Info, info)
     LOGFUNC(Debug, debug)
     LOGFUNC(Warn, warn)

@@ -7,11 +7,13 @@ extern "C" {
     fn log(s: &str);
 }
 
-pub(crate) fn print_to_console(s: &str) {
-    log(s);
-}
+pub struct DefaultLoggerCallback;
 
-pub(crate) fn print_to_logfile(_: &str) {}
+impl LoggerCallback for DefaultLoggerCallback {
+    fn print_to_console(&self, s: &str) {
+        log(s);
+    }
+}
 
 pub(crate) fn time_string() -> String {
     return Date::new_0().to_iso_string().into();

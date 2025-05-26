@@ -6,11 +6,32 @@ mod wasm;
 #[cfg(not(target_arch = "wasm32"))]
 mod native;
 
+use std::sync::{LazyLock, RwLock};
+
 #[cfg(target_arch = "wasm32")]
-use wasm::*;
+pub use wasm::*;
 
 #[cfg(not(target_arch = "wasm32"))]
-use native::*;
+pub use native::*;
+
+pub trait LoggerCallback: Send + Sync {
+    fn print_to_console(&self, s: &str) {}
+    fn print_to_logfile(&self, s: &str) {}
+}
+
+static LOGGER_CALLBACK: LazyLock<RwLock<Box<dyn LoggerCallback>>> = LazyLock::new(|| RwLock::new(Box::new(DefaultLoggerCallback)));
+
+pub fn print_to_console(s: &str) {
+    LOGGER_CALLBACK.read().unwrap().print_to_console(s);
+}
+
+pub fn print_to_logfile(s: &str) {
+    LOGGER_CALLBACK.read().unwrap().print_to_logfile(s);
+}
+
+pub fn set_logger_callback(callback: Box<dyn LoggerCallback>) {
+    *LOGGER_CALLBACK.write().unwrap() = callback;
+}
 
 macro log_badge($prefix: tt, $badge: tt, $start: tt, $msg: tt, $end: tt) {
     let time = time_string();
