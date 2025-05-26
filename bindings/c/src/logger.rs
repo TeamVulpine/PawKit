@@ -1,16 +1,16 @@
 use std::ffi::c_char;
 
-use pawkit_logger::{DefaultLoggerCallback, LoggerCallback};
+use pawkit_logger::{DefaultLoggerCallbacks, LoggerCallbacks};
 
 use crate::{cstr_to_str, disown_str_to_cstr, drop_cstr};
 
 #[repr(C)]
-struct CLoggerCallback {
+struct CLoggerCallbacks {
     print_to_console: Option<extern "C" fn(*const c_char)>,
     print_to_logfile: Option<extern "C" fn(*const c_char)>,
 }
 
-impl LoggerCallback for CLoggerCallback {
+impl LoggerCallbacks for CLoggerCallbacks {
     fn print_to_console(&self, s: &str) {
         let Some(print) = self.print_to_logfile else {
             return;
@@ -41,13 +41,13 @@ impl LoggerCallback for CLoggerCallback {
 }
 
 #[no_mangle]
-unsafe extern "C" fn pawkit_logger_set_logger_callback(callback: CLoggerCallback) {
-    pawkit_logger::set_logger_callback(Box::new(callback));
+unsafe extern "C" fn pawkit_logger_set_logger_callbacks(callback: CLoggerCallbacks) {
+    pawkit_logger::set_logger_callbacks(Box::new(callback));
 }
 
 #[no_mangle]
-unsafe extern "C" fn pawkit_logger_reset_logger_callback() {
-    pawkit_logger::set_logger_callback(Box::new(DefaultLoggerCallback));
+unsafe extern "C" fn pawkit_logger_reset_logger_callbacks() {
+    pawkit_logger::set_logger_callbacks(Box::new(DefaultLoggerCallbacks));
 }
 
 #[no_mangle]

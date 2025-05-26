@@ -14,25 +14,25 @@ pub use wasm::*;
 #[cfg(not(target_arch = "wasm32"))]
 pub use native::*;
 
-pub trait LoggerCallback: Send + Sync {
+pub trait LoggerCallbacks: Send + Sync {
     #[allow(unused_variables)]
     fn print_to_console(&self, s: &str) {}
     #[allow(unused_variables)]
     fn print_to_logfile(&self, s: &str) {}
 }
 
-static LOGGER_CALLBACK: LazyLock<RwLock<Box<dyn LoggerCallback>>> = LazyLock::new(|| RwLock::new(Box::new(DefaultLoggerCallback)));
+static LOGGER_CALLBACKS: LazyLock<RwLock<Box<dyn LoggerCallbacks>>> = LazyLock::new(|| RwLock::new(Box::new(DefaultLoggerCallbacks)));
 
 pub fn print_to_console(s: &str) {
-    LOGGER_CALLBACK.read().unwrap().print_to_console(s);
+    LOGGER_CALLBACKS.read().unwrap().print_to_console(s);
 }
 
 pub fn print_to_logfile(s: &str) {
-    LOGGER_CALLBACK.read().unwrap().print_to_logfile(s);
+    LOGGER_CALLBACKS.read().unwrap().print_to_logfile(s);
 }
 
-pub fn set_logger_callback(callback: Box<dyn LoggerCallback>) {
-    *LOGGER_CALLBACK.write().unwrap() = callback;
+pub fn set_logger_callbacks(callback: Box<dyn LoggerCallbacks>) {
+    *LOGGER_CALLBACKS.write().unwrap() = callback;
 }
 
 macro log_badge($prefix: tt, $badge: tt, $start: tt, $msg: tt, $end: tt) {

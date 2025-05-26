@@ -8,13 +8,13 @@ extern "C" {
 
 typedef PAWKIT_CDECL void (*pawkit_logger_callback_fn)(const char* message);
 
-typedef struct pawkit_logger_callback_t {
+typedef struct pawkit_logger_callbacks_t {
     pawkit_logger_callback_fn print_to_console;
     pawkit_logger_callback_fn print_to_logfile;
-} pawkit_logger_callback;
+} pawkit_logger_callbacks;
 
-void pawkit_logger_set_logger_callback(pawkit_logger_callback callback);
-void pawkit_logger_reset_logger_callback();
+void pawkit_logger_set_logger_callbacks(pawkit_logger_callbacks callback);
+void pawkit_logger_reset_logger_callbacks();
 
 void pawkit_logger_info(char const *message);
 void pawkit_logger_debug(char const *message);
@@ -47,12 +47,14 @@ void pawkit_logger_fatal(char const *message);
 #endif
 
 namespace PawKit::Logger {
-    inline void SetLoggerCallback(pawkit_logger_callback callback) {
-        pawkit_logger_set_logger_callback(callback);
+    using LoggerCallbacks = pawkit_logger_callbacks;
+
+    inline void SetLoggerCallbacks(LoggerCallbacks callback) {
+        pawkit_logger_set_logger_callbacks(callback);
     }
 
-    inline void ResetLoggerCallback() {
-        pawkit_logger_reset_logger_callback();
+    inline void ResetLoggerCallbacks() {
+        pawkit_logger_reset_logger_callbacks();
     }
 
     LOGFUNC(Info, info)

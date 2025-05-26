@@ -7,7 +7,7 @@ use std::{
 
 use chrono::Local;
 
-use crate::LoggerCallback;
+use crate::LoggerCallbacks;
 
 static LOG_FILE: LazyLock<Mutex<BufWriter<File>>> = LazyLock::new(|| {
     let timestamp = Local::now().format("%Y.%m.%d at %H.%M.%S.txt").to_string();
@@ -26,9 +26,9 @@ static LOG_FILE: LazyLock<Mutex<BufWriter<File>>> = LazyLock::new(|| {
     Mutex::new(BufWriter::new(file))
 });
 
-pub struct DefaultLoggerCallback;
+pub struct DefaultLoggerCallbacks;
 
-impl LoggerCallback for DefaultLoggerCallback {
+impl LoggerCallbacks for DefaultLoggerCallbacks {
     fn print_to_console(&self, s: &str) {
         let mut stdout = stdout().lock();
         stdout.write(s.as_bytes()).unwrap();
