@@ -15,7 +15,9 @@ pub use wasm::*;
 pub use native::*;
 
 pub trait LoggerCallback: Send + Sync {
+    #[allow(unused_variables)]
     fn print_to_console(&self, s: &str) {}
+    #[allow(unused_variables)]
     fn print_to_logfile(&self, s: &str) {}
 }
 
