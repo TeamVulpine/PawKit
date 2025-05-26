@@ -45,7 +45,7 @@ impl NetHostPeer {
     pub fn create(
         server_url: &str,
         game_id: u32,
-    ) -> Option<(Arc<Self>, UnboundedReceiver<NetHostPeerEvent>)> {
+    ) -> (Arc<Self>, UnboundedReceiver<NetHostPeerEvent>) {
         let (ev_dispatcher, ev_queue) = unbounded_channel::<NetHostPeerEvent>();
 
         let value = Arc::new(Self {
@@ -62,7 +62,7 @@ impl NetHostPeer {
 
         value.clone().spawn_worker();
 
-        return Some((value, ev_queue));
+        return (value, ev_queue);
     }
 
     pub fn get_host_id(&self) -> HostId {
@@ -84,19 +84,22 @@ impl NetHostPeer {
         signaling: &mut HostPeerSignalingClient,
         candidate: ClientConnectionCandidate,
     ) -> Option<usize> {
-        let Ok(conn) = SimpleRemotePeerConnection::build(candidate.offer.clone()).await else {
+        let Ok(connection) = SimpleRemotePeerConnection::build(candidate.offer.clone()).await
+        else {
             signaling.reject_candidate(candidate.client_id).await;
             return None;
         };
 
-        let _ = conn.add_ice_candidates(candidate.candidates.clone()).await;
+        let _ = connection
+            .add_ice_candidates(candidate.candidates.clone())
+            .await;
 
-        let Some(offer) = conn.get_local_description().await else {
+        let Some(offer) = connection.get_local_description().await else {
             signaling.reject_candidate(candidate.client_id).await;
             return None;
         };
 
-        let Ok(candidates) = conn.collect_ice_candidates().await else {
+        let Ok(candidates) = connection.collect_ice_candidates().await else {
             signaling.reject_candidate(candidate.client_id).await;
             return None;
         };
@@ -107,11 +110,11 @@ impl NetHostPeer {
 
         let mut connected_clients = self.connected_clients.write().await;
 
-        let PeerConnectionState::Connected = conn.state_change().await else {
+        let PeerConnectionState::Connected = connection.state_change().await else {
             return None;
         };
 
-        let Ok(channel) = conn.receive_channel().await else {
+        let Ok(channel) = connection.receive_channel().await else {
             return None;
         };
 
@@ -246,17 +249,14 @@ pub struct SimpleNetHostPeer {
 }
 
 impl SimpleNetHostPeer {
-    pub fn create(server_url: &str, game_id: u32) -> Option<Self> {
-        let (raw_peer, ev_queue) = NetHostPeer::create(server_url, game_id)?;
+    pub fn create(server_url: &str, game_id: u32) -> Self {
+        let (raw_peer, ev_queue) = NetHostPeer::create(server_url, game_id);
 
-        return Some(Self { raw_peer, ev_queue });
+        return Self { raw_peer, ev_queue };
     }
 
     pub fn next_event(&mut self) -> Option<NetHostPeerEvent> {
-        if self.ev_queue.is_empty() {
-            return None;
-        }
-        return self.ev_queue.blocking_recv();
+        return self.ev_queue.try_recv().ok();
     }
 }
 

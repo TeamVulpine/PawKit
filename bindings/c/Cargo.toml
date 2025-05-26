@@ -13,3 +13,4 @@ crate-type = ["staticlib", "cdylib"]
 [dependencies]
 pawkit-logger.workspace = true
 pawkit-net.workspace = true
+pawkit-net-signaling.workspace = true

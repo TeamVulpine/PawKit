@@ -23,7 +23,10 @@ impl HostPeerSignalingClient {
         let mut sock = ClientSocket::open(server_url, crate::SendMode::Cbor).await?;
 
         sock.send(SignalMessageC2S::HostPeer {
-            value: HostPeerMessageC2S::Register { game_id, request_proxy: false },
+            value: HostPeerMessageC2S::Register {
+                game_id,
+                request_proxy: false,
+            },
         })
         .await;
 
