@@ -8,6 +8,7 @@ repository = "https://github.com/TeamVulpine/PawKit/tree/main/bindings/c"
 description = "PawKit's C(++) bindings"
 
 [lib]
+name = "pawkit" 
 crate-type = ["staticlib", "cdylib"]
 
 [dependencies]
