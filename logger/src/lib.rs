@@ -21,7 +21,8 @@ pub trait LoggerCallbacks: Send + Sync {
     fn print_to_logfile(&self, s: &str) {}
 }
 
-static LOGGER_CALLBACKS: LazyLock<RwLock<Box<dyn LoggerCallbacks>>> = LazyLock::new(|| RwLock::new(Box::new(DefaultLoggerCallbacks)));
+static LOGGER_CALLBACKS: LazyLock<RwLock<Box<dyn LoggerCallbacks>>> =
+    LazyLock::new(|| RwLock::new(Box::new(DefaultLoggerCallbacks)));
 
 pub fn print_to_console(s: &str) {
     LOGGER_CALLBACKS.read().unwrap().print_to_console(s);

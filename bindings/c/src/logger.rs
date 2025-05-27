@@ -18,7 +18,7 @@ impl LoggerCallbacks for CLoggerCallbacks {
 
         unsafe {
             let cstr = disown_str_to_cstr(s);
-        
+
             print(cstr);
 
             drop_cstr(cstr);
@@ -32,7 +32,7 @@ impl LoggerCallbacks for CLoggerCallbacks {
 
         unsafe {
             let cstr = disown_str_to_cstr(s);
-        
+
             print(cstr);
 
             drop_cstr(cstr);

@@ -10,7 +10,7 @@ members = [
   "fs",
   "crockford",
   "holy-array"
-, "bindings/c"]
+, "bindings/c", "bindings/lua"]
 
 [workspace.dependencies]
 pawkit-net-signaling.path = "./net/signaling"
@@ -80,3 +80,6 @@ anyhow = "1.0.98"
 bytes = "1.10.1"
 
 reqwest = "0.12.15"
+
+mlua.version = "0.10.5"
+mlua.features = ["lua54", "module"] 
