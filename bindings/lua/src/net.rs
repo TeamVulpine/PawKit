@@ -34,9 +34,9 @@ pub(crate) fn init(lua: &Lua) -> LuaResult<LuaTable> {
     return Ok(exports);
 }
 
-fn host(_lua: &Lua, args: (String, u32)) -> LuaResult<LuaNetHostPeer> {
+fn host(_lua: &Lua, args: (String, u32, Option<bool>)) -> LuaResult<LuaNetHostPeer> {
     return Ok(LuaNetHostPeer {
-        peer: SimpleNetHostPeer::create(&args.0, args.1),
+        peer: SimpleNetHostPeer::create(&args.0, args.1, args.2.unwrap_or(false)),
     });
 }
 

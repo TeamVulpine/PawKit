@@ -15,12 +15,13 @@ use crate::{
 unsafe extern "C" fn pawkit_net_host_peer_create(
     server_url: *const c_char,
     game_id: u32,
+    request_proxy: bool
 ) -> *mut SimpleNetHostPeer {
     let Some(server_url) = cstr_to_str(server_url) else {
         return null_mut();
     };
 
-    return move_to_heap(SimpleNetHostPeer::create(server_url, game_id));
+    return move_to_heap(SimpleNetHostPeer::create(server_url, game_id, request_proxy));
 }
 
 #[no_mangle]

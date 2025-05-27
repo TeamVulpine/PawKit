@@ -19,13 +19,13 @@ pub struct ClientConnectionCandidate {
 }
 
 impl HostPeerSignalingClient {
-    pub async fn new(server_url: &str, game_id: u32) -> Option<Self> {
+    pub async fn new(server_url: &str, game_id: u32, request_proxy: bool) -> Option<Self> {
         let mut sock = ClientSocket::open(server_url, crate::SendMode::Cbor).await?;
 
         sock.send(SignalMessageC2S::HostPeer {
             value: HostPeerMessageC2S::Register {
                 game_id,
-                request_proxy: false,
+                request_proxy,
             },
         })
         .await;

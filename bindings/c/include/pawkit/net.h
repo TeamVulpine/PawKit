@@ -19,7 +19,7 @@ typedef enum {
     PAWKIT_NET_HOST_EVENT_TYPE_HOST_ID_UPDATED,
 } pawkit_net_host_event_type;
 
-pawkit_net_host_peer pawkit_net_host_peer_create(char *server_url, uint32_t game_id);
+pawkit_net_host_peer pawkit_net_host_peer_create(char *server_url, uint32_t game_id, bool request_proxy);
 void pawkit_net_host_peer_destroy(pawkit_net_host_peer peer);
 
 char const *pawkit_net_host_peer_get_host_id(pawkit_net_host_peer peer);
@@ -114,8 +114,8 @@ namespace PawKit::Networking {
         pawkit_net_host_peer peer {nullptr};
 
         public:
-        inline NetHostPeer(std::string &&serverUrl, uint32_t gameId) :
-            peer(pawkit_net_host_peer_create(serverUrl.data(), gameId))
+        inline NetHostPeer(std::string &&serverUrl, uint32_t gameId, bool requestProxy) :
+            peer(pawkit_net_host_peer_create(serverUrl.data(), gameId, requestProxy))
         {
             assert(peer != nullptr);
         }

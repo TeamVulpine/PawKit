@@ -31,6 +31,7 @@ pub struct NetHostPeer {
     running: AtomicBool,
     game_id: u32,
     host_id: RwLock<HostId>,
+    request_proxy: bool
 }
 
 #[derive(Debug)]
@@ -45,6 +46,7 @@ impl NetHostPeer {
     pub fn create(
         server_url: &str,
         game_id: u32,
+        request_proxy: bool,
     ) -> (Arc<Self>, UnboundedReceiver<NetHostPeerEvent>) {
         let (ev_dispatcher, ev_queue) = unbounded_channel::<NetHostPeerEvent>();
 
@@ -58,6 +60,7 @@ impl NetHostPeer {
                 lobby_id: 0,
                 shard_id: 0,
             }),
+            request_proxy
         });
 
         value.clone().spawn_worker();
@@ -133,6 +136,7 @@ impl NetHostPeer {
                 let Some(new_signaling) = HostPeerSignalingClient::new(
                     &self.host_id.read().await.server_url,
                     self.game_id,
+                    self.request_proxy
                 )
                 .await
                 else {
@@ -170,6 +174,7 @@ impl NetHostPeer {
                 let Some(host) = HostPeerSignalingClient::new(
                     &self.host_id.read().await.server_url,
                     self.game_id,
+                    self.request_proxy
                 )
                 .await
                 else {
@@ -249,8 +254,8 @@ pub struct SimpleNetHostPeer {
 }
 
 impl SimpleNetHostPeer {
-    pub fn create(server_url: &str, game_id: u32) -> Self {
-        let (raw_peer, ev_queue) = NetHostPeer::create(server_url, game_id);
+    pub fn create(server_url: &str, game_id: u32, request_proxy: bool) -> Self {
+        let (raw_peer, ev_queue) = NetHostPeer::create(server_url, game_id, request_proxy);
 
         return Self { raw_peer, ev_queue };
     }
