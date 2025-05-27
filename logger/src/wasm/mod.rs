@@ -1,15 +1,17 @@
 use wasm_bindgen::prelude::*;
 use web_sys::js_sys::Date;
 
+use crate::LoggerCallbacks;
+
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = console)]
     fn log(s: &str);
 }
 
-pub struct DefaultLoggerCallback;
+pub struct DefaultLoggerCallbacks;
 
-impl LoggerCallback for DefaultLoggerCallback {
+impl LoggerCallbacks for DefaultLoggerCallbacks {
     fn print_to_console(&self, s: &str) {
         log(s);
     }

@@ -183,7 +183,7 @@ impl SimpleSignalingServer {
             .await;
 
         while socket.is_open() {
-            tokio::select! {
+            pawkit_futures::select! {
                 Some(msg) = socket.recv() => {
                     match msg {
                         SignalMessageC2S::HostPeer {
@@ -415,7 +415,7 @@ impl SimpleSignalingServer {
     pub async fn start(self: Arc<Self>) {
         while let Ok((stream, _)) = self.listener.accept().await {
             let cloned = self.clone();
-            tokio::spawn(async move {
+            pawkit_futures::spawn(async move {
                 if let Some(stream) = cloned.accept_stream(stream).await {
                     cloned.socket_thread(stream).await;
                 }

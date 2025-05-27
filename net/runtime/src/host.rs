@@ -23,7 +23,7 @@ use tokio::sync::{
     RwLock,
 };
 
-use crate::{recieve_packet, PacketFuture, RUNTIME};
+use crate::{recieve_packet, PacketFuture};
 
 pub struct NetHostPeer {
     connected_clients: RwLock<HolyArray<Arc<Channel>>>,
@@ -79,7 +79,7 @@ impl NetHostPeer {
             return;
         };
 
-        let _ = RUNTIME.block_on(client.send(&Bytes::copy_from_slice(data)));
+        let _ = pawkit_futures::block_on(client.send(&Bytes::copy_from_slice(data)));
     }
 
     async fn handle_candidate(
@@ -194,7 +194,7 @@ impl NetHostPeer {
         while self.running.load(Ordering::Relaxed) {
             self.refresh_signaling(&mut signaling).await;
 
-            tokio::select! {
+            pawkit_futures::select! {
                 Some(candidate) = signaling.next_candidate() => {
                     let Some(peer_id) = self.handle_candidate(&mut signaling, candidate).await else {
                         continue;
@@ -233,16 +233,8 @@ impl NetHostPeer {
         self.running.store(false, Ordering::Relaxed);
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
     fn spawn_worker(self: Arc<Self>) {
-        RUNTIME.spawn(async move {
-            self.worker_loop().await;
-        });
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    fn spawn_worker(self: Arc<Self>) {
-        wasm_bindgen_futures::spawn_local(async move {
+        pawkit_futures::spawn(async move {
             self.worker_loop().await;
         });
     }

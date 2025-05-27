@@ -1,0 +1,9 @@
+[package]
+name = "pawkit-futures"
+version = "0.1.0"
+edition = "2021"
+
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tokio.workspace = true
+tokio.features = ["rt-multi-thread"]

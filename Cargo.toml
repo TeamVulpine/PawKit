@@ -9,10 +9,16 @@ members = [
   "net/http",
   "fs",
   "crockford",
-  "holy-array"
-, "bindings/c", "bindings/lua"]
+  "holy-array",
+  "bindings/c",
+  "bindings/lua",
+  "futures"
+]
 
 [workspace.dependencies]
+pawkit-futures.path = "./futures"
+pawkit-futures.version = "0.1.0"
+
 pawkit-net-signaling.path = "./net/signaling"
 pawkit-net-signaling.version = "0.1.0"
 

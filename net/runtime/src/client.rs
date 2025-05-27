@@ -17,7 +17,7 @@ use tokio::sync::{
     RwLock,
 };
 
-use crate::{recieve_packet, RUNTIME};
+use crate::{recieve_packet};
 
 pub struct NetClientPeer {
     channel: RwLock<Option<Channel>>,
@@ -59,7 +59,7 @@ impl NetClientPeer {
         let conn = self.channel.blocking_read();
 
         if let Some(conn) = &*conn {
-            let _ = RUNTIME.block_on(conn.send(&Bytes::copy_from_slice(data)));
+            let _ = pawkit_futures::block_on(conn.send(&Bytes::copy_from_slice(data)));
         }
     }
 
@@ -129,14 +129,10 @@ impl NetClientPeer {
         self.running.store(false, Ordering::Relaxed);
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
     fn spawn_worker(self: Arc<Self>) {
-        RUNTIME.spawn(self.worker_loop());
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    fn spawn_worker(self: Arc<Self>) {
-        wasm_bindgen_futures::spawn_local(self.worker_loop());
+        pawkit_futures::spawn(async move {
+            self.worker_loop().await;
+        });
     }
 }
 
