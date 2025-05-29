@@ -8,8 +8,7 @@ use std::{
 
 use bytes::Bytes;
 use just_webrtc::{
-    platform::Channel, types::PeerConnectionState, DataChannelExt, PeerConnectionExt,
-    SimpleLocalPeerConnection,
+    types::PeerConnectionState, DataChannelExt, PeerConnectionExt, SimpleLocalPeerConnection,
 };
 use pawkit_net_signaling::{client::ClientPeerSignalingClient, model::HostId};
 use tokio::sync::{
@@ -17,10 +16,10 @@ use tokio::sync::{
     RwLock,
 };
 
-use crate::{recieve_packet};
+use crate::{recieve_packet, Connection};
 
 pub struct NetClientPeer {
-    channel: RwLock<Option<Channel>>,
+    connection: RwLock<Option<Connection>>,
     ev_dispatcher: UnboundedSender<NetClientPeerEvent>,
     running: AtomicBool,
     host_id: HostId,
@@ -43,7 +42,7 @@ impl NetClientPeer {
         let (ev_dispatcher, ev_queue) = unbounded_channel::<NetClientPeerEvent>();
 
         let peer = Arc::new(Self {
-            channel: RwLock::new(None),
+            connection: RwLock::new(None),
             ev_dispatcher,
             running: AtomicBool::new(true),
             host_id,
@@ -56,14 +55,14 @@ impl NetClientPeer {
     }
 
     pub fn send_packet(&self, data: &[u8]) {
-        let conn = self.channel.blocking_read();
+        let conn = self.connection.blocking_read();
 
         if let Some(conn) = &*conn {
-            let _ = pawkit_futures::block_on(conn.send(&Bytes::copy_from_slice(data)));
+            let _ = pawkit_futures::block_on(conn.channel.send(&Bytes::copy_from_slice(data)));
         }
     }
 
-    async fn connect_to_host(&self) -> Option<Channel> {
+    async fn connect_to_host(&self) -> Option<Connection> {
         let mut signaling =
             ClientPeerSignalingClient::new(&self.host_id.server_url, self.game_id).await?;
 
@@ -83,8 +82,7 @@ impl NetClientPeer {
         let _ = connection.add_ice_candidates(candidate.candidates).await;
 
         if let PeerConnectionState::Connected = connection.state_change().await {
-            let channel = connection.receive_channel().await.ok()?;
-            return Some(channel);
+            return Connection::from(connection).await.ok();
         }
 
         None
@@ -99,25 +97,31 @@ impl NetClientPeer {
         };
 
         {
-            let mut lock = self.channel.write().await;
+            let mut lock = self.connection.write().await;
             *lock = Some(conn);
         }
 
         let _ = self.ev_dispatcher.send(NetClientPeerEvent::Connected);
 
         while self.running.load(Ordering::Relaxed) {
-            let channel = self.channel.read().await;
-            let Some(channel) = &*channel else {
+            let connection = self.connection.read().await;
+            let Some(connection) = &*connection else {
                 break;
             };
 
-            let Some(packet) = recieve_packet(channel).await else {
-                break;
-            };
+            pawkit_futures::select! {
+                Some(packet) = recieve_packet(&connection.channel) => {
+                    let _ = self
+                        .ev_dispatcher
+                        .send(NetClientPeerEvent::PacketReceived { data: packet });
+                }
 
-            let _ = self
-                .ev_dispatcher
-                .send(NetClientPeerEvent::PacketReceived { data: packet });
+                PeerConnectionState::Disconnected = connection.raw_connection.state_change() => {
+                    break;
+                }
+
+                else => break
+            }
         }
 
         let _ = self.ev_dispatcher.send(NetClientPeerEvent::Disconnected);

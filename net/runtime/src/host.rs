@@ -10,8 +10,7 @@ use std::{
 use bytes::Bytes;
 use futures_util::{stream::FuturesUnordered, StreamExt};
 use just_webrtc::{
-    platform::Channel, types::PeerConnectionState, DataChannelExt, PeerConnectionExt,
-    SimpleRemotePeerConnection,
+    types::PeerConnectionState, DataChannelExt, PeerConnectionExt, SimpleRemotePeerConnection,
 };
 use pawkit_holy_array::HolyArray;
 use pawkit_net_signaling::{
@@ -23,15 +22,15 @@ use tokio::sync::{
     RwLock,
 };
 
-use crate::{recieve_packet, PacketFuture};
+use crate::{recieve_packet, Connection, PacketFuture};
 
 pub struct NetHostPeer {
-    connected_clients: RwLock<HolyArray<Arc<Channel>>>,
+    connected_clients: RwLock<HolyArray<Arc<Connection>>>,
     ev_dispatcher: UnboundedSender<NetHostPeerEvent>,
     running: AtomicBool,
     game_id: u32,
     host_id: RwLock<HostId>,
-    request_proxy: bool
+    request_proxy: bool,
 }
 
 #[derive(Debug)]
@@ -60,7 +59,7 @@ impl NetHostPeer {
                 lobby_id: 0,
                 shard_id: 0,
             }),
-            request_proxy
+            request_proxy,
         });
 
         value.clone().spawn_worker();
@@ -79,7 +78,7 @@ impl NetHostPeer {
             return;
         };
 
-        let _ = pawkit_futures::block_on(client.send(&Bytes::copy_from_slice(data)));
+        let _ = pawkit_futures::block_on(client.channel.send(&Bytes::copy_from_slice(data)));
     }
 
     async fn handle_candidate(
@@ -117,11 +116,9 @@ impl NetHostPeer {
             return None;
         };
 
-        let Ok(channel) = connection.receive_channel().await else {
-            return None;
-        };
+        let connection = Connection::from(connection).await.ok()?;
 
-        let peer_id = connected_clients.acquire(Arc::new(channel));
+        let peer_id = connected_clients.acquire(Arc::new(connection));
 
         let _ = self
             .ev_dispatcher
@@ -136,7 +133,7 @@ impl NetHostPeer {
                 let Some(new_signaling) = HostPeerSignalingClient::new(
                     &self.host_id.read().await.server_url,
                     self.game_id,
-                    self.request_proxy
+                    self.request_proxy,
                 )
                 .await
                 else {
@@ -151,6 +148,18 @@ impl NetHostPeer {
         }
     }
 
+    async fn packet_task(peer: Arc<Connection>, peer_id: usize) -> (Option<Vec<u8>>, usize) {
+        pawkit_futures::select! {
+            Some(packet) = recieve_packet(&peer.channel) => {
+                return (Some(packet), peer_id)
+            }
+
+            PeerConnectionState::Disconnected = peer.raw_connection.state_change() => {
+                return (None, peer_id)
+            }
+        }
+    }
+
     async fn add_packet_task(
         &self,
         tasks: &FuturesUnordered<Pin<Box<PacketFuture>>>,
@@ -162,10 +171,7 @@ impl NetHostPeer {
             return;
         };
 
-        let peer = peer.clone();
-        tasks.push(Box::pin(
-            async move { (recieve_packet(&peer).await, peer_id) },
-        ));
+        tasks.push(Box::pin(Self::packet_task(peer.clone(), peer_id)));
     }
 
     async fn worker_loop(&self) {
@@ -174,7 +180,7 @@ impl NetHostPeer {
                 let Some(host) = HostPeerSignalingClient::new(
                     &self.host_id.read().await.server_url,
                     self.game_id,
-                    self.request_proxy
+                    self.request_proxy,
                 )
                 .await
                 else {
