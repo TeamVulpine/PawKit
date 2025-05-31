@@ -66,8 +66,12 @@ async fn load_tls_acceptor(pfx_path: &str, password: &str) -> Option<TlsAcceptor
 }
 
 impl SimpleSignalingServer {
-    const PATH_ENV: &str = "PAWKIT_SIGNALING_TLS_PATH";
-    const PASS_ENV: &str = "PAWKIT_SIGNALING_TLS_PASS";
+    pub const PATH_ENV: &str = "PAWKIT_SIGNALING_TLS_PATH";
+    pub const PASS_ENV: &str = "PAWKIT_SIGNALING_TLS_PASS";
+
+    pub fn has_tls_evn() -> bool {
+        return env::var(Self::PATH_ENV).is_ok() && env::var(Self::PASS_ENV).is_ok();
+    }
 
     pub async fn new(addr: &str, server_url: String) -> Option<Arc<Self>> {
         let listener = TcpListener::bind(addr).await.ok()?;
