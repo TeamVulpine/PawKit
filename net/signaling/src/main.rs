@@ -19,6 +19,9 @@ async fn main() {
         SECURE_LOCALHOST_URL.into()
     });
 
+    pawkit_logger::info(&format!("Local URL: localhost:{}", port_string));
+    pawkit_logger::info(&format!("Remote URL: {}", url_string));
+
     SimpleSignalingServer::new(&format!("localhost:{}", port_string), url_string.into())
         .await
         .unwrap()
