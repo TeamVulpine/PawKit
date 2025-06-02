@@ -420,9 +420,12 @@ impl SimpleSignalingServer {
         while let Ok((stream, _)) = self.listener.accept().await {
             let cloned = self.clone();
             pawkit_futures::spawn(async move {
-                if let Some(stream) = cloned.accept_stream(stream).await {
-                    cloned.socket_thread(stream).await;
-                }
+                let Some(stream) = cloned.accept_stream(stream).await else {
+                    pawkit_logger::error("Unable to accept stream.");
+                    return;
+                };
+
+                cloned.socket_thread(stream).await;
             });
         }
     }
