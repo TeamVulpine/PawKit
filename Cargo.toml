@@ -17,31 +17,31 @@ members = [
 
 [workspace.dependencies]
 pawkit-futures.path = "./futures"
-pawkit-futures.version = "0.1.0"
+pawkit-futures.version = "0.1.1"
 
 pawkit-net-signaling.path = "./net/signaling"
-pawkit-net-signaling.version = "0.1.0"
+pawkit-net-signaling.version = "0.1.1"
 
 pawkit-net-websocket.path = "./net/websocket"
-pawkit-net-websocket.version = "0.1.0"
+pawkit-net-websocket.version = "0.1.1"
 
 pawkit-net.path = "./net/runtime"
-pawkit-net.version = "0.1.0"
+pawkit-net.version = "0.1.1"
 
 pawkit-net-http.path = "./net/htp"
-pawkit-net-http.version = "0.1.0"
+pawkit-net-http.version = "0.1.1"
 
 pawkit-logger.path = "./logger"
-pawkit-logger.version = "0.1.0"
+pawkit-logger.version = "0.1.1"
 
 pawkit-fs.path = "./fs"
-pawkit-fs.version = "0.1.0"
+pawkit-fs.version = "0.1.1"
 
 pawkit-crockford.path = "./crockford"
-pawkit-crockford.version = "0.1.0"
+pawkit-crockford.version = "0.1.1"
 
 pawkit-holy-array.path = "./holy-array"
-pawkit-holy-array.version = "0.1.0"
+pawkit-holy-array.version = "0.1.1"
 
 tokio-tungstenite.version = "0.26.2"
 tokio-tungstenite.features = ["native-tls"]
