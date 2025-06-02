@@ -12,7 +12,9 @@ members = [
   "holy-array",
   "bindings/c",
   "bindings/lua",
-  "futures"
+  "futures",
+  "input",
+  "bitarray"
 ]
 
 [workspace.dependencies]
@@ -42,6 +44,9 @@ pawkit-crockford.version = "0.1.1"
 
 pawkit-holy-array.path = "./holy-array"
 pawkit-holy-array.version = "0.1.1"
+
+pawkit-bitarray.path = "./bitarray"
+pawkit-bitarray.version = "0.1.1"
 
 tokio-tungstenite.version = "0.26.2"
 tokio-tungstenite.features = ["native-tls"]

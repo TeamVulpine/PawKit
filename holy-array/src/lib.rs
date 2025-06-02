@@ -48,6 +48,14 @@ impl<T> HolyArray<T> {
         return Some(value);
     }
 
+    pub fn get_mut(&mut self, index: usize) -> Option<&mut T> {
+        let Some(Some(value)) = self.data.get_mut(index) else {
+            return None;
+        };
+
+        return Some(value);
+    }
+
     pub fn len(&self) -> usize {
         return self.data.len();
     }
