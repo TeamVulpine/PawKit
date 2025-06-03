@@ -1,8 +1,7 @@
 #pragma once
 
 #include <assert.h>
-#include <stddef.h>
-#include <stdint.h>
+#include "util.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,21 +18,21 @@ typedef enum {
     PAWKIT_NET_HOST_EVENT_TYPE_HOST_ID_UPDATED,
 } pawkit_net_host_event_type;
 
-pawkit_net_host_peer pawkit_net_host_peer_create(char *server_url, uint32_t game_id, bool request_proxy);
+pawkit_net_host_peer pawkit_net_host_peer_create(char *server_url, pawkit_u32 game_id, bool request_proxy);
 void pawkit_net_host_peer_destroy(pawkit_net_host_peer peer);
 
 char const *pawkit_net_host_peer_get_host_id(pawkit_net_host_peer peer);
 void pawkit_net_host_peer_free_host_id(char const *id);
 
-void pawkit_net_host_peer_send_packet(pawkit_net_host_peer peer, size_t peer_id, uint8_t *data, size_t size);
+void pawkit_net_host_peer_send_packet(pawkit_net_host_peer peer, pawkit_usize peer_id, pawkit_u8 *data, pawkit_usize size);
 
 pawkit_net_host_event pawkit_net_host_peer_poll_event(pawkit_net_host_peer peer);
 void pawkit_net_host_event_free(pawkit_net_host_event evt);
 
 pawkit_net_host_event_type pawkit_net_host_event_get_type(pawkit_net_host_event evt);
-size_t pawkit_net_host_event_get_peer_id(pawkit_net_host_event evt);
+pawkit_usize pawkit_net_host_event_get_peer_id(pawkit_net_host_event evt);
 /// Ownership is retained by the event. Can be NULL.
-uint8_t *pawkit_net_host_event_get_data(pawkit_net_host_event evt, size_t *size);
+pawkit_u8 *pawkit_net_host_event_get_data(pawkit_net_host_event evt, pawkit_usize *size);
 
 typedef void *pawkit_net_client_peer;
 
@@ -46,17 +45,17 @@ typedef enum {
     PAWKIT_NET_CLIENT_EVENT_TYPE_PACKET_RECEIVED,
 } pawkit_net_client_event_type;
 
-pawkit_net_client_peer pawkit_net_client_peer_create(char *host_id, uint32_t game_id);
+pawkit_net_client_peer pawkit_net_client_peer_create(char *host_id, pawkit_u32 game_id);
 void pawkit_net_client_peer_destroy(pawkit_net_client_peer peer);
 
-void pawkit_net_client_peer_send_packet(pawkit_net_client_peer peer, uint8_t *data, size_t size);
+void pawkit_net_client_peer_send_packet(pawkit_net_client_peer peer, pawkit_u8 *data, pawkit_usize size);
 
 pawkit_net_client_event pawkit_net_client_peer_poll_event(pawkit_net_client_peer peer);
 void pawkit_net_client_event_free(pawkit_net_client_event evt);
 
 pawkit_net_client_event_type pawkit_net_client_event_get_type(pawkit_net_client_event evt);
 /// Ownership is retained by the event. Can be NULL.
-uint8_t *pawkit_net_client_event_get_data(pawkit_net_client_event evt, size_t *size);
+pawkit_u8 *pawkit_net_client_event_get_data(pawkit_net_client_event evt, pawkit_usize *size);
 
 #ifdef __cplusplus
 }
@@ -90,22 +89,22 @@ namespace PawKit::Networking {
             return pawkit_net_host_event_get_type(evt);
         }
 
-        size_t GetPeerId() {
+        pawkit_usize GetPeerId() {
             return pawkit_net_host_event_get_peer_id(evt);
         }
 
-        std::optional<std::vector<uint8_t>> GetData() {
+        std::optional<std::vector<pawkit_u8>> GetData() {
             if (GetType() != PAWKIT_NET_HOST_EVENT_TYPE_PACKET_RECEIVED)
                 return std::nullopt;
 
-            size_t size = 0;
+            pawkit_usize size = 0;
 
-            uint8_t *data = pawkit_net_host_event_get_data(evt, &size);
+            pawkit_u8 *data = pawkit_net_host_event_get_data(evt, &size);
 
             if (!data)
                 return std::nullopt;
 
-            return std::vector<uint8_t>(data, data + size);
+            return std::vector<pawkit_u8>(data, data + size);
         }
     };
 
@@ -114,7 +113,7 @@ namespace PawKit::Networking {
         pawkit_net_host_peer peer {nullptr};
 
         public:
-        inline NetHostPeer(std::string &&serverUrl, uint32_t gameId, bool requestProxy) :
+        inline NetHostPeer(std::string &&serverUrl, pawkit_u32 gameId, bool requestProxy) :
             peer(pawkit_net_host_peer_create(serverUrl.data(), gameId, requestProxy))
         {
             assert(peer != nullptr);
@@ -128,16 +127,16 @@ namespace PawKit::Networking {
             pawkit_net_host_peer_destroy(peer);
         }
 
-        inline void SendPacket(size_t peerId, uint8_t *data, size_t size) {
+        inline void SendPacket(pawkit_usize peerId, pawkit_u8 *data, pawkit_usize size) {
             pawkit_net_host_peer_send_packet(peer, peerId, data, size);
         }
 
-        inline void SendPacket(size_t peerId, std::vector<uint8_t> &&data) {
+        inline void SendPacket(pawkit_usize peerId, std::vector<pawkit_u8> &&data) {
             SendPacket(peerId, data.data(), data.size());
         }
 
-        template <size_t TSize>
-        inline void SendPacket(size_t peerId, std::array<uint8_t, TSize> &&data) {
+        template <pawkit_usize TSize>
+        inline void SendPacket(pawkit_usize peerId, std::array<pawkit_u8, TSize> &&data) {
             SendPacket(peerId, data.data(), data.size());
         }
 
@@ -185,16 +184,16 @@ namespace PawKit::Networking {
             return pawkit_net_client_event_get_type(evt);
         }
 
-        std::optional<std::vector<uint8_t>> GetData() {
+        std::optional<std::vector<pawkit_u8>> GetData() {
             if (GetType() != PAWKIT_NET_CLIENT_EVENT_TYPE_PACKET_RECEIVED)
                 return std::nullopt;
 
-            size_t size = 0;
-            uint8_t* data = pawkit_net_client_event_get_data(evt, &size);
+            pawkit_usize size = 0;
+            pawkit_u8* data = pawkit_net_client_event_get_data(evt, &size);
             if (!data)
                 return std::nullopt;
 
-            return std::vector<uint8_t>(data, data + size);
+            return std::vector<pawkit_u8>(data, data + size);
         }
     };
 
@@ -203,7 +202,7 @@ namespace PawKit::Networking {
         pawkit_net_client_peer peer {nullptr};
 
         public:
-        inline NetClientPeer(std::string&& hostId, uint32_t gameId) :
+        inline NetClientPeer(std::string&& hostId, pawkit_u32 gameId) :
             peer(pawkit_net_client_peer_create(hostId.data(), gameId))
         {
             assert(peer != nullptr);
@@ -217,16 +216,16 @@ namespace PawKit::Networking {
             pawkit_net_client_peer_destroy(peer);
         }
 
-        inline void SendPacket(uint8_t* data, size_t size) {
+        inline void SendPacket(pawkit_u8* data, pawkit_usize size) {
             pawkit_net_client_peer_send_packet(peer, data, size);
         }
 
-        inline void SendPacket(std::vector<uint8_t>&& data) {
+        inline void SendPacket(std::vector<pawkit_u8>&& data) {
             SendPacket(data.data(), data.size());
         }
 
-        template <size_t TSize>
-        inline void SendPacket(std::array<uint8_t, TSize>&& data) {
+        template <pawkit_usize TSize>
+        inline void SendPacket(std::array<pawkit_u8, TSize>&& data) {
             SendPacket(data.data(), data.size());
         }
 

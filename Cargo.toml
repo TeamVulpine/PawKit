@@ -48,9 +48,14 @@ pawkit-holy-array.version = "0.1.1"
 pawkit-bitarray.path = "./bitarray"
 pawkit-bitarray.version = "0.1.1"
 
+pawkit-input.path = "./input"
+pawkit-input.version = "0.1.1"
+
 tokio-tungstenite.version = "0.26.2"
 tokio-tungstenite.features = ["native-tls"]
 tokio-native-tls = "0.3.1"
+
+num_enum = "0.7.3"
 
 serde.version = "1.0.219"
 serde.features = ["serde_derive"]

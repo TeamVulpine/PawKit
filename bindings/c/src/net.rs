@@ -8,7 +8,7 @@ use pawkit_net::{NetClientPeerEvent, NetHostPeerEvent, SimpleNetClientPeer, Simp
 use pawkit_net_signaling::model::HostId;
 
 use crate::{
-    cstr_to_str, disown_str_to_cstr, drop_cstr, drop_from_heap, move_to_heap, ptr_to_slice,
+    c_enum, cstr_to_str, disown_str_to_cstr, drop_cstr, drop_from_heap, move_to_heap, ptr_to_ref, ptr_to_slice
 };
 
 #[no_mangle]
@@ -62,11 +62,15 @@ unsafe extern "C" fn pawkit_net_host_peer_send_packet(
     data: *const u8,
     size: usize,
 ) {
-    if peer.is_null() || data.is_null() || size == 0 {
+    let Some(peer) = ptr_to_ref(peer) else {
         return;
-    }
+    };
 
-    (*peer).send_packet(client_id, ptr_to_slice(data, size));
+    let Some(data) = ptr_to_slice(data, size) else {
+        return;
+    };
+
+    peer.send_packet(client_id, data);
 }
 
 #[no_mangle]
@@ -93,13 +97,17 @@ unsafe extern "C" fn pawkit_net_host_event_free(evt: *mut NetHostPeerEvent) {
     drop_from_heap(evt);
 }
 
-const HOST_PEER_CONNECTED: i32 = 0;
-const HOST_PEER_DISCONNECTED: i32 = 1;
-const HOST_PACKET_RECEIVED: i32 = 2;
-const HOST_ID_UPDATED: i32 = 3;
+c_enum!(CHostPeerEventType {
+    HOST_PEER_CONNECTED,
+    HOST_PEER_DISCONNECTED,
+    HOST_PACKET_RECEIVED,
+    HOST_ID_UPDATED,
+});
 
 #[no_mangle]
-unsafe extern "C" fn pawkit_net_host_event_get_type(evt: *mut NetHostPeerEvent) -> i32 {
+unsafe extern "C" fn pawkit_net_host_event_get_type(
+    evt: *mut NetHostPeerEvent,
+) -> CHostPeerEventType {
     if evt.is_null() {
         return -1;
     }
@@ -178,11 +186,15 @@ unsafe extern "C" fn pawkit_net_client_peer_send_packet(
     data: *const u8,
     size: usize,
 ) {
-    if peer.is_null() || data.is_null() || size == 0 {
+    let Some(peer) = ptr_to_ref(peer) else {
         return;
-    }
+    };
 
-    (*peer).send_packet(ptr_to_slice(data, size));
+    let Some(data) = ptr_to_slice(data, size) else {
+        return;
+    };
+
+    peer.send_packet(data);
 }
 
 #[no_mangle]
@@ -200,13 +212,17 @@ pub unsafe extern "C" fn pawkit_net_client_peer_poll_event(
     move_to_heap(evt)
 }
 
-const CLIENT_CONNECTED: i32 = 0;
-const CLIENT_DISCONNECTED: i32 = 1;
-const CLIENT_CONNECTION_FAILED: i32 = 2;
-const CLIENT_PACKET_RECEIVED: i32 = 3;
+c_enum!(CClientPeerEventType {
+    CLIENT_CONNECTED,
+    CLIENT_DISCONNECTED,
+    CLIENT_CONNECTION_FAILED,
+    CLIENT_PACKET_RECEIVED,
+});
 
 #[no_mangle]
-pub unsafe extern "C" fn pawkit_net_client_event_get_type(evt: *mut NetClientPeerEvent) -> i32 {
+pub unsafe extern "C" fn pawkit_net_client_event_get_type(
+    evt: *mut NetClientPeerEvent,
+) -> CClientPeerEventType {
     if evt.is_null() {
         return -1;
     }

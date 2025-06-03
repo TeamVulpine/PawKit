@@ -18,7 +18,6 @@ pub(self) macro implement_into($ty:ty) {
     }
 }
 
-#[repr(C, u8)]
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[serde(bound = "TButton: for<'a> Deserialize<'a>, TAxis: for<'a> Deserialize<'a>")]
 pub enum BoundButton<TButton, TAxis>
@@ -26,11 +25,10 @@ where
     TButton: Sized + Debug + Clone + Copy + PartialEq + PartialOrd + Serialize,
     TAxis: Sized + Debug + Clone + Copy + PartialEq + PartialOrd + Serialize,
 {
-    Analog { threshold: f32, axis: TAxis },
+    Analog { axis: TAxis, threshold: f32 },
     Digital(TButton),
 }
 
-#[repr(C, u8)]
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[serde(bound = "TButton: for<'a> Deserialize<'a>, TAxis: for<'a> Deserialize<'a>")]
 pub enum BoundAxis<TButton, TAxis>
@@ -46,7 +44,6 @@ where
     },
 }
 
-#[repr(C, u8)]
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum DigitalBinding {
     Keyboard(BoundButton<KeyboardButton, KeyboardAxis>),
@@ -54,7 +51,6 @@ pub enum DigitalBinding {
     Gamepad(BoundButton<GamepadButton, GamepadAxis>),
 }
 
-#[repr(C, u8)]
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum AnalogBindingKind {
     Keyboard(BoundAxis<KeyboardButton, KeyboardAxis>),
@@ -62,7 +58,6 @@ pub enum AnalogBindingKind {
     Gamepad(BoundAxis<GamepadButton, GamepadAxis>),
 }
 
-#[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct AnalogBinding {
     #[serde(flatten)]
@@ -71,7 +66,6 @@ pub struct AnalogBinding {
     pub scale: f32,
 }
 
-#[repr(C, u8)]
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum VectorBindingKind {
     Keyboard {
@@ -88,7 +82,6 @@ pub enum VectorBindingKind {
     },
 }
 
-#[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct VectorBinding {
     #[serde(flatten)]
@@ -112,7 +105,7 @@ pub struct DefaultBinding {
 
 impl Deref for DefaultBinding {
     type Target = str;
-    
+
     fn deref(&self) -> &Self::Target {
         return self.name;
     }

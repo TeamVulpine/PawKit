@@ -1,13 +1,18 @@
 #![feature(decl_macro)]
 
-use std::{fmt::Debug, vec};
+use std::{
+    fmt::Debug,
+    ops::{Deref, DerefMut},
+    vec,
+};
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
     binding_map::{BindingList, BindingMap, DefaultBindingMap},
     bindings::{
-        AnalogBinding, AnalogBindingKind, BoundAxis, BoundButton, DefaultBinding, DigitalBinding, VectorBinding, VectorBindingKind
+        AnalogBinding, AnalogBindingKind, BoundAxis, BoundButton, DigitalBinding, VectorBinding,
+        VectorBindingKind,
     },
     manager::{InputDeviceManager, InputFamily},
 };
@@ -17,19 +22,16 @@ pub mod bindings;
 pub mod manager;
 
 pub struct InputManager {
-    bindings: DefaultBindingMap,
+    pub bindings: DefaultBindingMap,
     pub keyboard_manager: InputDeviceManager,
     pub mouse_manager: InputDeviceManager,
     pub gamepad_manager: InputDeviceManager,
 }
 
 impl InputManager {
-    pub fn new(mut bindings: DefaultBindingMap) -> Self {
-        // Lock the bindings. The user is expected to fill in the map before passing it into the manager.
-        bindings.lock();
-
+    pub fn new() -> Self {
         Self {
-            bindings,
+            bindings: DefaultBindingMap::new(),
             keyboard_manager: InputDeviceManager::new(InputFamily::Keyboard),
             mouse_manager: InputDeviceManager::new(InputFamily::Mouse),
             gamepad_manager: InputDeviceManager::new(InputFamily::Gamepad),
@@ -74,6 +76,20 @@ impl InputManager {
             connected_gamepads: Vec::new(),
             frames: frames.into_boxed_slice(),
         };
+    }
+}
+
+impl Deref for InputManager {
+    type Target = DefaultBindingMap;
+
+    fn deref(&self) -> &Self::Target {
+        return &self.bindings;
+    }
+}
+
+impl DerefMut for InputManager {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        return &mut self.bindings;
     }
 }
 
@@ -363,7 +379,7 @@ impl<'a> InputHandler<'a> {
     fn vec_len_squared(v: (f32, f32)) -> f32 {
         return v.0 * v.0 + v.1 * v.1;
     }
-    
+
     fn vec_sub(a: (f32, f32), b: (f32, f32)) -> (f32, f32) {
         return (a.0 - b.0, a.1 - b.1);
     }
@@ -376,8 +392,7 @@ impl<'a> InputHandler<'a> {
             match value {
                 BindingList::Analog(bindings) => {
                     let InputFrame::Analog {
-                        value: old_value,
-                        ..
+                        value: old_value, ..
                     } = *frame
                     else {
                         continue;
@@ -389,7 +404,7 @@ impl<'a> InputHandler<'a> {
 
                         if analog.abs() > value.abs() {
                             value = analog;
-                        } 
+                        }
                     }
 
                     // SAFETY: `self.frames` has the same size as `self.bindings.values`.
@@ -401,8 +416,7 @@ impl<'a> InputHandler<'a> {
 
                 BindingList::Digital(bindings) => {
                     let InputFrame::Digital {
-                        value: old_value,
-                        ..
+                        value: old_value, ..
                     } = *frame
                     else {
                         continue;
@@ -415,7 +429,7 @@ impl<'a> InputHandler<'a> {
                         if digital {
                             value = true;
                             break;
-                        } 
+                        }
                     }
 
                     // SAFETY: `self.frames` has the same size as `self.bindings.values`.
@@ -428,8 +442,7 @@ impl<'a> InputHandler<'a> {
 
                 BindingList::Vector(bindings) => {
                     let InputFrame::Vector {
-                        value: old_value,
-                        ..
+                        value: old_value, ..
                     } = *frame
                     else {
                         continue;
@@ -441,7 +454,7 @@ impl<'a> InputHandler<'a> {
 
                         if Self::vec_len_squared(vector) > Self::vec_len_squared(value) {
                             value = vector;
-                        } 
+                        }
                     }
 
                     // SAFETY: `self.frames` has the same size as `self.bindings.values`.
@@ -463,13 +476,14 @@ impl<'a> InputHandler<'a> {
             return Some(self.frames.get_unchecked(index));
         }
     }
-    
+
     pub fn connect_device(&mut self, family: InputFamily, id: usize) {
         match family {
             InputFamily::Gamepad => &mut self.connected_gamepads,
             InputFamily::Keyboard => &mut self.connected_keyboards,
             InputFamily::Mouse => &mut self.connected_mice,
-        }.push(id);
+        }
+        .push(id);
     }
 
     pub fn disconnect_device(&mut self, family: InputFamily, id: usize) {

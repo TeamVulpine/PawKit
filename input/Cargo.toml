@@ -4,6 +4,7 @@ version = "0.1.1"
 edition = "2024"
 
 [dependencies]
+num_enum.workspace = true
 pawkit-bitarray.workspace = true
 pawkit-holy-array.workspace = true
 
