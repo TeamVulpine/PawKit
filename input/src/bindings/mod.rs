@@ -93,8 +93,8 @@ pub struct VectorBinding {
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub enum DefaultBindingType<'a> {
     Digital(&'a [DigitalBinding]),
-    Analog(&'a [DigitalBinding]),
-    Vector(&'a [DigitalBinding]),
+    Analog(&'a [AnalogBinding]),
+    Vector(&'a [VectorBinding]),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
