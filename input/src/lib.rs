@@ -1,14 +1,13 @@
 #![feature(decl_macro)]
 
-use std::{fmt::Debug, vec};
+use std::{fmt::Debug, ops::Index, vec};
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
     binding_map::{BindingList, BindingMap, DefaultBindingMap},
     bindings::{
-        AnalogBinding, AnalogBindingKind, BoundAxis, BoundButton, DigitalBinding, VectorBinding,
-        VectorBindingKind,
+        AnalogBinding, AnalogBindingKind, BoundAxis, BoundButton, DefaultBinding, DigitalBinding, VectorBinding, VectorBindingKind
     },
     manager::{InputDeviceManager, InputFamily},
 };
@@ -100,8 +99,8 @@ pub enum InputFrame {
 ///
 /// It manages it's own bindings, and keeps track of the devices it's using.
 pub struct InputHandler<'a> {
-    pub manager: &'a InputManager,
     pub bindings: BindingMap<'a>,
+    pub manager: &'a InputManager,
     connected_keyboards: Vec<usize>,
     connected_mice: Vec<usize>,
     connected_gamepads: Vec<usize>,
@@ -463,5 +462,27 @@ impl<'a> InputHandler<'a> {
         unsafe {
             return Some(self.frames.get_unchecked(index));
         }
+    }
+    
+    pub fn connect_device(&mut self, family: InputFamily, id: usize) {
+        match family {
+            InputFamily::Gamepad => &mut self.connected_gamepads,
+            InputFamily::Keyboard => &mut self.connected_keyboards,
+            InputFamily::Mouse => &mut self.connected_mice,
+        }.push(id);
+    }
+
+    pub fn disconnect_device(&mut self, family: InputFamily, id: usize) {
+        let vec = match family {
+            InputFamily::Gamepad => &mut self.connected_gamepads,
+            InputFamily::Keyboard => &mut self.connected_keyboards,
+            InputFamily::Mouse => &mut self.connected_mice,
+        };
+
+        let Some(index) = vec.iter().position(|it| *it == id) else {
+            return;
+        };
+
+        vec.remove(index);
     }
 }

@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, ops::Deref};
 
 use serde::{Deserialize, Serialize};
 
@@ -97,7 +97,6 @@ pub struct VectorBinding {
     pub scale: (f32, f32),
 }
 
-#[repr(C, u8)]
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub enum DefaultBindingType<'a> {
     Digital(&'a [DigitalBinding]),
@@ -109,4 +108,12 @@ pub enum DefaultBindingType<'a> {
 pub struct DefaultBinding {
     pub name: &'static str,
     pub bindings: DefaultBindingType<'static>,
+}
+
+impl Deref for DefaultBinding {
+    type Target = str;
+    
+    fn deref(&self) -> &Self::Target {
+        return self.name;
+    }
 }
