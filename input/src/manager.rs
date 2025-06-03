@@ -1,13 +1,31 @@
 use pawkit_bitarray::BitArray;
 use pawkit_holy_array::HolyArray;
 
-pub struct InputFamily {
-    pub name: String,
-    pub digital_count: usize,
-    pub analog_count: usize,
+pub enum InputFamily {
+    Keyboard,
+    Mouse,
+    Gamepad,
 }
 
-pub struct InputManager {
+impl InputFamily {
+    pub fn digital_count(&self) -> usize {
+        return match self {
+            Self::Keyboard => 120,
+            Self::Mouse => 5,
+            Self::Gamepad => 26,
+        };
+    }
+
+    pub fn analog_count(&self) -> usize {
+        return match self {
+            Self::Keyboard => 0,
+            Self::Mouse => 4,
+            Self::Gamepad => 6,
+        };
+    }
+}
+
+pub struct InputDeviceManager {
     family: InputFamily,
     devices: HolyArray<InputDeviceState>,
 }
@@ -18,7 +36,7 @@ pub struct InputDeviceState {
     raw_id: usize,
 }
 
-impl InputManager {
+impl InputDeviceManager {
     pub fn new(family: InputFamily) -> Self {
         return Self {
             family,
@@ -42,8 +60,8 @@ impl InputManager {
 
     pub fn device_connected(&mut self, raw_id: usize) -> usize {
         return self.devices.acquire(InputDeviceState {
-            digital_inputs: BitArray::new(self.family.digital_count),
-            analog_inputs: vec![0f32; self.family.analog_count].into_boxed_slice(),
+            digital_inputs: BitArray::new(self.family.digital_count()),
+            analog_inputs: vec![0f32; self.family.analog_count()].into_boxed_slice(),
             raw_id,
         });
     }
