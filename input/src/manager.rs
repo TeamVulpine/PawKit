@@ -33,7 +33,7 @@ impl InputManager {
             };
 
             if device.raw_id == raw_id {
-                return Some(id)
+                return Some(id);
             }
         }
 
@@ -49,7 +49,6 @@ impl InputManager {
     }
 
     pub fn device_disconnected(&mut self, id: usize) {
-        
         self.devices.release(id);
     }
 
@@ -57,7 +56,7 @@ impl InputManager {
         let Some(id) = self.raw_id_to_id(raw_id) else {
             return;
         };
-        
+
         self.device_disconnected(id);
     }
 
@@ -83,5 +82,41 @@ impl InputManager {
         };
 
         return self.get_state_mut(id);
+    }
+}
+
+impl InputDeviceState {
+    pub fn get_analog<TAnalog>(&self, axis: TAnalog) -> f32
+    where
+        TAnalog: Sized + Into<u8>,
+    {
+        return self.analog_inputs[axis.into() as usize];
+    }
+
+    pub fn get_digital<TDigital>(&self, button: TDigital) -> bool
+    where
+        TDigital: Sized + Into<u8>,
+    {
+        return self.digital_inputs.get(button.into() as usize).unwrap();
+    }
+
+    pub fn set_analog<TAnalog>(&mut self, axis: TAnalog, value: f32)
+    where
+        TAnalog: Sized + Into<u8>,
+    {
+        self.analog_inputs[axis.into() as usize] = value
+    }
+
+    pub fn set_digital<TDigital>(&mut self, button: TDigital, value: bool)
+    where
+        TDigital: Sized + Into<u8>,
+    {
+        let index = button.into();
+
+        if value {
+            self.digital_inputs.set(index as usize);
+        } else {
+            self.digital_inputs.reset(index as usize);
+        }
     }
 }
