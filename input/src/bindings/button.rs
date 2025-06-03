@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::bindings::implement_into;
+
 #[rustfmt::skip]
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -44,6 +46,8 @@ pub enum KeyboardButton {
     F24,
 }
 
+implement_into!(KeyboardButton);
+
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
@@ -54,6 +58,8 @@ pub enum MouseButton {
     Side1,
     Side2,
 }
+
+implement_into!(MouseButton);
 
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -86,3 +92,5 @@ pub enum GamepadButton {
     Misc5,
     Misc6,
 }
+
+implement_into!(GamepadButton);

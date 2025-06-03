@@ -3,12 +3,20 @@ use std::fmt::Debug;
 use serde::{Deserialize, Serialize};
 
 use crate::bindings::{
-    axis::{GamepadAxis, MouseAxis},
+    axis::{GamepadAxis, KeyboardAxis, MouseAxis},
     button::{GamepadButton, KeyboardButton, MouseButton},
 };
 
 pub mod axis;
 pub mod button;
+
+pub(self) macro implement_into($ty:ty) {
+    impl Into<usize> for $ty {
+        fn into(self) -> usize {
+            return self as usize;
+        }
+    }
+}
 
 #[repr(C, u8)]
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
@@ -41,7 +49,7 @@ where
 #[repr(C, u8)]
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum DigitalBinding {
-    Keyboard(BoundButton<KeyboardButton, ()>),
+    Keyboard(BoundButton<KeyboardButton, KeyboardAxis>),
     Mouse(BoundButton<MouseButton, MouseAxis>),
     Gamepad(BoundButton<GamepadButton, GamepadAxis>),
 }
@@ -49,7 +57,7 @@ pub enum DigitalBinding {
 #[repr(C, u8)]
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum AnalogBindingKind {
-    Keyboard(BoundAxis<KeyboardButton, ()>),
+    Keyboard(BoundAxis<KeyboardButton, KeyboardAxis>),
     Mouse(BoundAxis<MouseButton, MouseAxis>),
     Gamepad(BoundAxis<GamepadButton, GamepadAxis>),
 }
@@ -67,8 +75,8 @@ pub struct AnalogBinding {
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum VectorBindingKind {
     Keyboard {
-        x: BoundAxis<KeyboardButton, ()>,
-        y: BoundAxis<KeyboardButton, ()>,
+        x: BoundAxis<KeyboardButton, KeyboardAxis>,
+        y: BoundAxis<KeyboardButton, KeyboardAxis>,
     },
     Mouse {
         x: BoundAxis<MouseButton, MouseAxis>,

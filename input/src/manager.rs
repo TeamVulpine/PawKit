@@ -31,9 +31,9 @@ pub struct InputDeviceManager {
 }
 
 pub struct InputDeviceState {
+    raw_id: usize,
     pub digital_inputs: BitArray,
     pub analog_inputs: Box<[f32]>,
-    raw_id: usize,
 }
 
 impl InputDeviceManager {
@@ -60,9 +60,9 @@ impl InputDeviceManager {
 
     pub fn device_connected(&mut self, raw_id: usize) -> usize {
         return self.devices.acquire(InputDeviceState {
+            raw_id,
             digital_inputs: BitArray::new(self.family.digital_count()),
             analog_inputs: vec![0f32; self.family.analog_count()].into_boxed_slice(),
-            raw_id,
         });
     }
 
@@ -104,37 +104,23 @@ impl InputDeviceManager {
 }
 
 impl InputDeviceState {
-    pub fn get_analog<TAnalog>(&self, axis: TAnalog) -> f32
-    where
-        TAnalog: Sized + Into<u8>,
-    {
-        return self.analog_inputs[axis.into() as usize];
+    pub fn get_analog(&self, axis: usize) -> f32 {
+        return self.analog_inputs[axis];
     }
 
-    pub fn get_digital<TDigital>(&self, button: TDigital) -> bool
-    where
-        TDigital: Sized + Into<u8>,
-    {
-        return self.digital_inputs.get(button.into() as usize).unwrap();
+    pub fn get_digital(&self, button: usize) -> bool {
+        return self.digital_inputs.get(button).unwrap();
     }
 
-    pub fn set_analog<TAnalog>(&mut self, axis: TAnalog, value: f32)
-    where
-        TAnalog: Sized + Into<u8>,
-    {
-        self.analog_inputs[axis.into() as usize] = value
+    pub fn set_analog(&mut self, axis: usize, value: f32) {
+        self.analog_inputs[axis] = value
     }
 
-    pub fn set_digital<TDigital>(&mut self, button: TDigital, value: bool)
-    where
-        TDigital: Sized + Into<u8>,
-    {
-        let index = button.into();
-
+    pub fn set_digital(&mut self, button: usize, value: bool) {
         if value {
-            self.digital_inputs.set(index as usize);
+            self.digital_inputs.set(button);
         } else {
-            self.digital_inputs.reset(index as usize);
+            self.digital_inputs.reset(button);
         }
     }
 }

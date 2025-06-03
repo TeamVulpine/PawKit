@@ -31,8 +31,8 @@ pub enum BindingList {
 }
 
 pub struct DefaultBindingMap {
-    index: HashMap<String, usize>,
-    values: Vec<BindingList>,
+    pub(crate) index: HashMap<String, usize>,
+    pub(crate) values: Vec<BindingList>,
 
     /// Whether the default binding map is locked.
     ///
@@ -40,7 +40,7 @@ pub struct DefaultBindingMap {
     /// and instances can be created.
     ///
     /// Once it's locked, it cannot be unlocked.
-    locked: bool,
+    pub(crate) locked: bool,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -131,9 +131,9 @@ impl DefaultBindingMap {
 }
 
 pub struct BindingMap<'a> {
-    default: &'a DefaultBindingMap,
+    pub(crate) default: &'a DefaultBindingMap,
     /// Using a boxed slice, since the size will never change.
-    values: Box<[BindingList]>,
+    pub(crate) values: Box<[BindingList]>,
 }
 
 impl<'a> BindingMap<'a> {
