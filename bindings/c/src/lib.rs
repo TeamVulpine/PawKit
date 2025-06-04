@@ -5,9 +5,9 @@ use std::{
     ptr,
 };
 
-pub mod input;
-pub mod logger;
-pub mod net;
+mod input;
+mod logger;
+mod net;
 
 macro c_enum {
     (
@@ -15,7 +15,7 @@ macro c_enum {
             $($rest:tt),* $(,)?
         }
     ) => {
-        pub type $ty = $base_ty;
+        type $ty = $base_ty;
         c_enum!(@impl $base_ty, 0, $($rest),*);
     },
 
@@ -24,7 +24,7 @@ macro c_enum {
             $($rest:tt),* $(,)?
         }
     ) => {
-        pub type $ty = i32;
+        type $ty = i32;
         c_enum!(@impl i32, 0, $($rest),*);
     },
 
@@ -33,27 +33,27 @@ macro c_enum {
     (@impl $base_ty:ty, $_idx:expr,
         $name:ident = $val:literal, $($rest:tt),*
     ) => {
-        pub const $name: $base_ty = $val;
+        const $name: $base_ty = $val;
         c_enum!(@impl $base_ty, ($val + 1), $($rest),*);
     },
 
     (@impl $base_ty:ty, $idx:expr,
         $name:ident, $($rest:tt),*
     ) => {
-        pub const $name: $base_ty = $idx;
+        const $name: $base_ty = $idx;
         c_enum!(@impl $base_ty, ($idx + 1), $($rest),*);
     },
 
     (@impl $base_ty:ty, $_idx:expr,
         $name:ident = $val:literal
     ) => {
-        pub const $name: $base_ty = $val;
+        const $name: $base_ty = $val;
     },
 
     (@impl $base_ty:ty, $idx:expr,
         $name:ident
     ) => {
-        pub const $name: $base_ty = $idx;
+        const $name: $base_ty = $idx;
     },
 }
 

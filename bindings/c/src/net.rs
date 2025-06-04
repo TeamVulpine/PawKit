@@ -157,7 +157,7 @@ unsafe extern "C" fn pawkit_net_host_event_get_data(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn pawkit_net_client_peer_create(
+unsafe extern "C" fn pawkit_net_client_peer_create(
     host_id_str: *const c_char,
     game_id: u32,
 ) -> *mut SimpleNetClientPeer {
@@ -173,7 +173,7 @@ pub unsafe extern "C" fn pawkit_net_client_peer_create(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn pawkit_net_client_peer_destroy(peer: *mut SimpleNetClientPeer) {
+unsafe extern "C" fn pawkit_net_client_peer_destroy(peer: *mut SimpleNetClientPeer) {
     if peer.is_null() {
         return;
     }
@@ -199,7 +199,7 @@ unsafe extern "C" fn pawkit_net_client_peer_send_packet(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn pawkit_net_client_peer_poll_event(
+unsafe extern "C" fn pawkit_net_client_peer_poll_event(
     peer: *mut SimpleNetClientPeer,
 ) -> *mut NetClientPeerEvent {
     if peer.is_null() {
@@ -221,7 +221,7 @@ c_enum!(CClientPeerEventType {
 });
 
 #[no_mangle]
-pub unsafe extern "C" fn pawkit_net_client_event_get_type(
+unsafe extern "C" fn pawkit_net_client_event_get_type(
     evt: *mut NetClientPeerEvent,
 ) -> CClientPeerEventType {
     if evt.is_null() {
@@ -237,7 +237,7 @@ pub unsafe extern "C" fn pawkit_net_client_event_get_type(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn pawkit_net_client_event_get_data(
+unsafe extern "C" fn pawkit_net_client_event_get_data(
     evt: *mut NetClientPeerEvent,
     len: *mut usize,
 ) -> *const u8 {
