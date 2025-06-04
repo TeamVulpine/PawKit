@@ -37,11 +37,8 @@ impl InputManager {
         };
     }
 
-    pub fn create_handler(&self) -> InputHandler<'_> {
-        let bindings = self
-            .bindings
-            .new_instance()
-            .expect("The binding map should be locked by now.");
+    pub fn create_handler(&self) -> Option<InputHandler<'_>> {
+        let bindings = self.bindings.new_instance().ok()?;
 
         let mut frames = Vec::with_capacity(bindings.values.len());
 
@@ -67,14 +64,14 @@ impl InputManager {
             frames.push(frame);
         }
 
-        return InputHandler {
+        return Some(InputHandler {
             manager: self,
             bindings,
             connected_keyboards: Vec::new(),
             connected_mice: Vec::new(),
             connected_gamepads: Vec::new(),
             frames: frames.into_boxed_slice(),
-        };
+        });
     }
 }
 
@@ -334,7 +331,7 @@ impl<'a> InputHandler<'a> {
 
                     for binding in bindings {
                         let analog = self.get_binding_analog(binding);
-                        
+
                         if analog.abs() > value.abs() {
                             value = analog;
                         }
