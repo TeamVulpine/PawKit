@@ -207,11 +207,52 @@ bool pawkit_input_manager_register_binding(pawkit_input_manager_t manager, char 
 
 void pawkit_input_manager_lock_bindings(pawkit_input_manager_t manager);
 
+typedef void *pawkit_input_state_t;
+
+void pawkit_input_manager_device_connected(pawkit_input_manager_t manager, pawkit_input_family_t family, pawkit_usize id);
+void pawkit_input_manager_device_disconnected(pawkit_input_manager_t manager, pawkit_input_family_t family, pawkit_usize id);
+pawkit_input_state_t pawkit_input_manager_get_state(pawkit_input_manager_t manager, pawkit_input_family_t family, pawkit_usize id);
+void pawkit_input_state_set_button(pawkit_input_state_t state, pawkit_input_button_t button, bool value);
+void pawkit_input_state_set_axis(pawkit_input_state_t state, pawkit_input_axis_t axis, bool value);
+
+typedef void *pawkit_input_handler_t;
+
+pawkit_input_handler_t pawkit_input_manager_create_handler(pawkit_input_manager_t manager);
+void pawkit_input_handler_destroy(pawkit_input_handler_t handler);
+
+void pawkit_input_handler_update(pawkit_input_handler_t handler);
+
 enum {
     PAWKIT_INPUT_FRAME_TYPE_DIGITAL,
     PAWKIT_INPUT_FRAME_TYPE_ANALOG,
     PAWKIT_INPUT_FRAME_TYPE_VECTOR,
 };
+typedef pawkit_u8 pawkit_input_frame_type_t;
+
+typedef struct pawkit_input_frame_t {
+    pawkit_input_frame_type_t type;
+    union {
+        struct {
+            bool value;
+            bool just_pressed;
+            bool just_released;
+        } digital;
+        
+        struct {
+            pawkit_f32 value;
+            pawkit_f32 delta;
+        } analog;
+        
+        struct {
+            pawkit_f32 x;
+            pawkit_f32 y;
+            pawkit_f32 delta_x;
+            pawkit_f32 delta_y;
+        } vector;
+    };
+} pawkit_input_frame_t;
+
+bool pawkit_input_handler_get_frame(pawkit_input_handler_t handler, char const *binding, pawkit_input_frame_t *frame);
 
 #ifdef __cplusplus
 }

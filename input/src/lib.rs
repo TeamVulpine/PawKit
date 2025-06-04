@@ -3,7 +3,6 @@
 use std::{
     fmt::Debug,
     ops::{Deref, DerefMut},
-    vec,
 };
 
 use serde::{Deserialize, Serialize};
@@ -30,12 +29,12 @@ pub struct InputManager {
 
 impl InputManager {
     pub fn new() -> Self {
-        Self {
+        return Self {
             bindings: DefaultBindingMap::new(),
             keyboard_manager: InputDeviceManager::new(InputFamily::Keyboard),
             mouse_manager: InputDeviceManager::new(InputFamily::Mouse),
             gamepad_manager: InputDeviceManager::new(InputFamily::Gamepad),
-        }
+        };
     }
 
     pub fn create_handler(&self) -> InputHandler<'_> {
@@ -44,34 +43,28 @@ impl InputManager {
             .new_instance()
             .expect("The binding map should be locked by now.");
 
-        let mut frames = vec![];
-
-        frames.reserve(bindings.values.len());
+        let mut frames = Vec::with_capacity(bindings.values.len());
 
         for binding in &bindings.values {
-            let value = match binding {
-                BindingList::Analog(_) => RawInputFrame {
-                    analog: AnalogInputFrame {
-                        value: 0f32,
-                        delta: 0f32,
-                    },
+            let frame = match binding {
+                BindingList::Analog(_) => InputFrame::Analog {
+                    value: 0f32,
+                    delta: 0f32,
                 },
-                BindingList::Digital(_) => RawInputFrame {
-                    digital: DigitalInputFrame {
-                        value: false,
-                        just_pressed: false,
-                        just_released: false,
-                    },
+
+                BindingList::Digital(_) => InputFrame::Digital {
+                    value: false,
+                    just_pressed: false,
+                    just_released: false,
                 },
-                BindingList::Vector(_) => RawInputFrame {
-                    vector: VectorInputFrame {
-                        value: (0f32, 0f32),
-                        delta: (0f32, 0f32),
-                    },
+
+                BindingList::Vector(_) => InputFrame::Vector {
+                    value: (0f32, 0f32),
+                    delta: (0f32, 0f32),
                 },
             };
 
-            frames.push(value);
+            frames.push(frame);
         }
 
         return InputHandler {
@@ -99,36 +92,6 @@ impl DerefMut for InputManager {
     }
 }
 
-#[repr(C)]
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-pub struct DigitalInputFrame {
-    pub value: bool,
-    pub just_pressed: bool,
-    pub just_released: bool,
-}
-
-#[repr(C)]
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-pub struct AnalogInputFrame {
-    pub value: f32,
-    pub delta: f32,
-}
-
-#[repr(C)]
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-pub struct VectorInputFrame {
-    pub value: (f32, f32),
-    pub delta: (f32, f32),
-}
-
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub union RawInputFrame {
-    pub digital: DigitalInputFrame,
-    pub analog: AnalogInputFrame,
-    pub vector: VectorInputFrame,
-}
-
 #[repr(C, u8)]
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub enum InputFrame {
@@ -149,14 +112,14 @@ pub enum InputFrame {
 
 /// An `InputHandler`` represents a single input consumer, typically a player.
 ///
-/// It manages it's own bindings, and keeps track of the devices it's using.
+/// It manages its own bindings and keeps track of the devices it's using.
 pub struct InputHandler<'a> {
     pub bindings: BindingMap<'a>,
     pub manager: &'a InputManager,
     connected_keyboards: Vec<usize>,
     connected_mice: Vec<usize>,
     connected_gamepads: Vec<usize>,
-    frames: Box<[RawInputFrame]>,
+    frames: Box<[InputFrame]>,
 }
 
 impl<'a> InputHandler<'a> {
@@ -189,66 +152,48 @@ impl<'a> InputHandler<'a> {
 
         match axis {
             BoundAxis::Analog(axis) => {
-                let axis = *axis;
-
                 for device in connected_devices {
-                    let Some(device) = manager.get_state(*device) else {
-                        continue;
-                    };
-
-                    let analog = device.get_analog(axis.into());
-
-                    if analog.abs() > value.abs() {
-                        value = analog;
+                    if let Some(device) = manager.get_state(*device) {
+                        let analog = device.get_analog((*axis).into());
+                        if analog.abs() > value.abs() {
+                            value = analog;
+                        }
                     }
                 }
             }
 
             BoundAxis::Digital(button) => {
-                let button = *button;
-
                 for device in connected_devices {
-                    let Some(device) = manager.get_state(*device) else {
-                        continue;
-                    };
-
-                    let analog = if device.get_digital(button.into()) {
-                        1f32
-                    } else {
-                        0f32
-                    };
-
-                    if analog.abs() > value.abs() {
-                        value = analog;
+                    if let Some(device) = manager.get_state(*device) {
+                        let analog = if device.get_digital((*button).into()) {
+                            1f32
+                        } else {
+                            0f32
+                        };
+                        if analog.abs() > value.abs() {
+                            value = analog;
+                        }
                     }
                 }
             }
 
             BoundAxis::MultiDigital { negative, positive } => {
-                let negative = *negative;
-                let positive = *positive;
-
                 for device in connected_devices {
-                    let Some(device) = manager.get_state(*device) else {
-                        continue;
-                    };
-
-                    let positive = if device.get_digital(positive.into()) {
-                        1f32
-                    } else {
-                        0f32
-                    };
-
-                    let negative = if device.get_digital(negative.into()) {
-                        1f32
-                    } else {
-                        0f32
-                    };
-
-                    let analog = positive - negative;
-
-                    if analog.abs() > value.abs() {
-                        value = analog;
+                    if let Some(device) = manager.get_state(*device) {
+                        let pos = if device.get_digital((*positive).into()) {
+                            1f32
+                        } else {
+                            0f32
+                        };
+                        let neg = if device.get_digital((*negative).into()) {
+                            1f32
+                        } else {
+                            0f32
+                        };
+                        let analog = pos - neg;
+                        if analog.abs() > value.abs() {
+                            value = analog;
+                        }
                     }
                 }
             }
@@ -284,29 +229,21 @@ impl<'a> InputHandler<'a> {
     {
         match button {
             BoundButton::Analog { threshold, axis } => {
-                let axis = *axis;
-
                 for device in connected_devices {
-                    let Some(device) = manager.get_state(*device) else {
-                        continue;
-                    };
-
-                    if device.get_analog(axis.into()) > *threshold {
-                        return true;
+                    if let Some(device) = manager.get_state(*device) {
+                        if device.get_analog((*axis).into()) > *threshold {
+                            return true;
+                        }
                     }
                 }
             }
 
             BoundButton::Digital(button) => {
-                let button = *button;
-
                 for device in connected_devices {
-                    let Some(device) = manager.get_state(*device) else {
-                        continue;
-                    };
-
-                    if device.get_digital(button.into()) {
-                        return true;
+                    if let Some(device) = manager.get_state(*device) {
+                        if device.get_digital((*button).into()) {
+                            return true;
+                        }
                     }
                 }
             }
@@ -316,100 +253,62 @@ impl<'a> InputHandler<'a> {
     }
 
     fn get_binding_digital(&self, button: &DigitalBinding) -> bool {
-        match button {
-            DigitalBinding::Gamepad(gamepad) => {
-                return Self::get_bound_button(
-                    &self.manager.gamepad_manager,
-                    gamepad,
-                    &self.connected_gamepads,
-                );
-            }
+        return match button {
+            DigitalBinding::Gamepad(gamepad) => Self::get_bound_button(
+                &self.manager.gamepad_manager,
+                gamepad,
+                &self.connected_gamepads,
+            ),
 
-            DigitalBinding::Keyboard(keyboard) => {
-                return Self::get_bound_button(
-                    &self.manager.keyboard_manager,
-                    keyboard,
-                    &self.connected_keyboards,
-                );
-            }
+            DigitalBinding::Keyboard(keyboard) => Self::get_bound_button(
+                &self.manager.keyboard_manager,
+                keyboard,
+                &self.connected_keyboards,
+            ),
 
             DigitalBinding::Mouse(mouse) => {
-                return Self::get_bound_button(
-                    &self.manager.mouse_manager,
-                    mouse,
-                    &self.connected_mice,
-                );
+                Self::get_bound_button(&self.manager.mouse_manager, mouse, &self.connected_mice)
             }
-        }
+        };
     }
 
     fn get_binding_analog(&self, axis: &AnalogBinding) -> f32 {
-        match &axis.axis {
-            AnalogBindingKind::Gamepad(gamepad) => {
-                return Self::get_bound_axis(
-                    &self.manager.gamepad_manager,
-                    gamepad,
-                    &self.connected_gamepads,
-                );
-            }
+        return match &axis.axis {
+            AnalogBindingKind::Gamepad(gamepad) => Self::get_bound_axis(
+                &self.manager.gamepad_manager,
+                gamepad,
+                &self.connected_gamepads,
+            ),
 
-            AnalogBindingKind::Keyboard(keyboard) => {
-                return Self::get_bound_axis(
-                    &self.manager.keyboard_manager,
-                    keyboard,
-                    &self.connected_keyboards,
-                );
-            }
+            AnalogBindingKind::Keyboard(keyboard) => Self::get_bound_axis(
+                &self.manager.keyboard_manager,
+                keyboard,
+                &self.connected_keyboards,
+            ),
 
             AnalogBindingKind::Mouse(mouse) => {
-                return Self::get_bound_axis(
-                    &self.manager.mouse_manager,
-                    mouse,
-                    &self.connected_mice,
-                );
+                Self::get_bound_axis(&self.manager.mouse_manager, mouse, &self.connected_mice)
             }
-        }
+        };
     }
 
     fn get_binding_vector(&self, vec: &VectorBinding) -> (f32, f32) {
-        match &vec.axes {
-            VectorBindingKind::Gamepad { x, y } => {
-                return (
-                    Self::get_bound_axis(
-                        &self.manager.gamepad_manager,
-                        x,
-                        &self.connected_gamepads,
-                    ),
-                    Self::get_bound_axis(
-                        &self.manager.gamepad_manager,
-                        y,
-                        &self.connected_gamepads,
-                    ),
-                );
-            }
+        return match &vec.axes {
+            VectorBindingKind::Gamepad { x, y } => (
+                Self::get_bound_axis(&self.manager.gamepad_manager, x, &self.connected_gamepads),
+                Self::get_bound_axis(&self.manager.gamepad_manager, y, &self.connected_gamepads),
+            ),
 
-            VectorBindingKind::Keyboard { x, y } => {
-                return (
-                    Self::get_bound_axis(
-                        &self.manager.keyboard_manager,
-                        x,
-                        &self.connected_keyboards,
-                    ),
-                    Self::get_bound_axis(
-                        &self.manager.keyboard_manager,
-                        y,
-                        &self.connected_keyboards,
-                    ),
-                );
-            }
+            VectorBindingKind::Keyboard { x, y } => (
+                Self::get_bound_axis(&self.manager.keyboard_manager, x, &self.connected_keyboards),
+                Self::get_bound_axis(&self.manager.keyboard_manager, y, &self.connected_keyboards),
+            ),
 
-            VectorBindingKind::Mouse { x, y } => {
-                return (
-                    Self::get_bound_axis(&self.manager.mouse_manager, x, &self.connected_mice),
-                    Self::get_bound_axis(&self.manager.mouse_manager, y, &self.connected_mice),
-                );
-            }
-        }
+            VectorBindingKind::Mouse { x, y } => (
+                Self::get_bound_axis(&self.manager.mouse_manager, x, &self.connected_mice),
+                Self::get_bound_axis(&self.manager.mouse_manager, y, &self.connected_mice),
+            ),
+        };
     }
 
     fn vec_len_squared(v: (f32, f32)) -> f32 {
@@ -422,115 +321,85 @@ impl<'a> InputHandler<'a> {
 
     pub fn update(&mut self) {
         for (index, value) in self.bindings.values.iter().enumerate() {
-            // SAFETY: `self.frames` has the same size as `self.bindings.values`.
-            let frame = unsafe { self.frames.get_unchecked(index) };
+            let frame = &self.frames[index];
 
-            match value {
+            self.frames[index] = match value {
                 BindingList::Analog(bindings) => {
-                    // SAFETY: `self.frames` has the same layout as `self.bindings.values`, there isn't a need for a discriminator.
-                    let old_value = unsafe { frame.analog.value };
-
+                    let old = if let InputFrame::Analog { value, .. } = frame {
+                        *value
+                    } else {
+                        0f32
+                    };
                     let mut value = 0f32;
+
                     for binding in bindings {
                         let analog = self.get_binding_analog(binding);
-
+                        
                         if analog.abs() > value.abs() {
                             value = analog;
                         }
                     }
 
-                    // SAFETY: `self.frames` has the same size as `self.bindings.values`.
-                    *unsafe { self.frames.get_unchecked_mut(index) } = RawInputFrame {
-                        analog: AnalogInputFrame {
-                            value,
-                            delta: value - old_value,
-                        },
-                    };
+                    InputFrame::Analog {
+                        value,
+                        delta: value - old,
+                    }
                 }
 
                 BindingList::Digital(bindings) => {
-                    // SAFETY: `self.frames` has the same layout as `self.bindings.values`, there isn't a need for a discriminator.
-                    let old_value = unsafe { frame.digital.value };
-
+                    let old = if let InputFrame::Digital { value, .. } = frame {
+                        *value
+                    } else {
+                        false
+                    };
                     let mut value = false;
-                    for binding in bindings {
-                        let digital = self.get_binding_digital(binding);
 
-                        if digital {
+                    for binding in bindings {
+                        if self.get_binding_digital(binding) {
                             value = true;
                             break;
                         }
                     }
 
-                    // SAFETY: `self.frames` has the same size as `self.bindings.values`.
-                    *unsafe { self.frames.get_unchecked_mut(index) } = RawInputFrame {
-                        digital: DigitalInputFrame {
-                            value,
-                            just_pressed: value && !old_value,
-                            just_released: !value && old_value,
-                        },
-                    };
+                    InputFrame::Digital {
+                        value,
+                        just_pressed: value && !old,
+                        just_released: !value && old,
+                    }
                 }
 
                 BindingList::Vector(bindings) => {
-                    // SAFETY: `self.frames` has the same layout as `self.bindings.values`, there isn't a need for a discriminator.
-                    let old_value = unsafe { frame.vector.value };
-
+                    let old = if let InputFrame::Vector { value, .. } = frame {
+                        *value
+                    } else {
+                        (0f32, 0f32)
+                    };
                     let mut value = (0f32, 0f32);
-                    for binding in bindings {
-                        let vector = self.get_binding_vector(binding);
 
-                        if Self::vec_len_squared(vector) > Self::vec_len_squared(value) {
-                            value = vector;
+                    for binding in bindings {
+                        let vec = self.get_binding_vector(binding);
+
+                        if Self::vec_len_squared(vec) > Self::vec_len_squared(value) {
+                            value = vec;
                         }
                     }
 
-                    // SAFETY: `self.frames` has the same size as `self.bindings.values`.
-                    *unsafe { self.frames.get_unchecked_mut(index) } = RawInputFrame {
-                        vector: VectorInputFrame {
-                            value,
-                            delta: Self::vec_sub(value, old_value),
-                        },
-                    };
+                    InputFrame::Vector {
+                        value,
+                        delta: Self::vec_sub(value, old),
+                    }
                 }
-            }
-        }
-    }
-
-    pub fn get_frame_raw(&self, name: &str) -> Option<RawInputFrame> {
-        let index = *self.bindings.default.index.get(name)?;
-
-        // SAFETY: `self.frames` has the same size as `self.bindings.values`,
-        // and `self.bindings.default.index` only contains indices into that slice.
-        unsafe {
-            return Some(*self.frames.get_unchecked(index));
+            };
         }
     }
 
     pub fn get_frame(&self, name: &str) -> Option<InputFrame> {
-        let index = *self.bindings.default.index.get(name)?;
+        let index = match self.bindings.default.index.get(name) {
+            Some(index) => index,
+            None => return None,
+        };
 
-        // SAFETY: `self.frames` has the same size as `self.bindings.values`.
-        let raw = unsafe { self.frames.get_unchecked(index) };
-
-        // SAFETY: The variant of `BindingList` at `index` matches the union field accessed.
-        unsafe {
-            return Some(match self.bindings.default.values[index] {
-                BindingList::Analog(_) => InputFrame::Analog {
-                    value: raw.analog.value,
-                    delta: raw.analog.delta,
-                },
-                BindingList::Vector(_) => InputFrame::Vector {
-                    value: raw.vector.value,
-                    delta: raw.vector.delta,
-                },
-                BindingList::Digital(_) => InputFrame::Digital {
-                    value: raw.digital.value,
-                    just_pressed: raw.digital.just_pressed,
-                    just_released: raw.digital.just_released,
-                },
-            });
-        }
+        return Some(self.frames[*index]);
     }
 
     pub fn connect_device(&mut self, family: InputFamily, id: usize) {
@@ -549,10 +418,6 @@ impl<'a> InputHandler<'a> {
             InputFamily::Mouse => &mut self.connected_mice,
         };
 
-        let Some(index) = vec.iter().position(|it| *it == id) else {
-            return;
-        };
-
-        vec.remove(index);
+        vec.iter().position(|it| *it == id).map(|it| vec.remove(it));
     }
 }

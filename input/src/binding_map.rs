@@ -151,11 +151,9 @@ impl<'a> BindingMap<'a> {
         };
 
         for (name, index) in &self.default.index {
-            // SAFETY: `self.values` has the same length and order as `self.default.values`,
-            // and `self.default.index` only contains indices into that slice.
-            let bindings = unsafe { self.values.get_unchecked(*index) };
-
-            serial.values.insert(name.clone(), bindings.clone());
+            serial
+                .values
+                .insert(name.clone(), self.values[*index].clone());
         }
 
         return serial;
@@ -164,20 +162,12 @@ impl<'a> BindingMap<'a> {
     pub fn get_binding(&self, name: &str) -> Option<&BindingList> {
         let index = *self.default.index.get(name)?;
 
-        // SAFETY: `self.values` has the same length and order as `self.default.values`,
-        // and `self.default.index` only contains indices into that slice.
-        unsafe {
-            return Some(self.values.get_unchecked(index));
-        }
+        return Some(&self.values[index]);
     }
 
     pub fn get_binding_mut(&mut self, name: &str) -> Option<&mut BindingList> {
         let index = *self.default.index.get(name)?;
 
-        // SAFETY: `self.values` has the same length and order as `self.default.values`,
-        // and `self.default.index` only contains indices into that slice.
-        unsafe {
-            return Some(self.values.get_unchecked_mut(index));
-        }
+        return Some(&mut self.values[index]);
     }
 }
