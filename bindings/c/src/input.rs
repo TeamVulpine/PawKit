@@ -1,16 +1,15 @@
-use std::{ffi::c_char, fmt::Debug};
+use std::{ffi::c_char, fmt::Debug, ptr::null_mut};
 
 use num_enum::TryFromPrimitive;
 use pawkit_input::{
     bindings::{
         AnalogBinding, AnalogBindingKind, BoundAxis, BoundButton, DefaultBindingType,
         DigitalBinding, VectorBinding, VectorBindingKind,
-    },
-    InputManager,
+    }, manager::InputDeviceState, InputFrame, InputHandler, InputManager
 };
 use serde::Serialize;
 
-use crate::{c_enum, cstr_to_str, drop_from_heap, move_to_heap, ptr_to_ref_mut, ptr_to_slice};
+use crate::{c_enum, cstr_to_str, drop_from_heap, move_to_heap, ptr_to_ref, ptr_to_ref_mut, ptr_to_slice};
 
 c_enum!(CInputFamily: u8 {
     INPUT_FAMILY_KEY,
@@ -140,13 +139,13 @@ where
         + TryFromPrimitive<Primitive = u8>,
 {
     match button.kind {
-        BOUND_BUTTON_TYPE_ANALOG => {
+        BOUND_BUTTON_TYPE_DIGITAL => {
             return Some(BoundButton::Digital(
                 TButton::try_from_primitive(button.value.button).ok()?,
             ));
         }
 
-        BOUND_BUTTON_TYPE_DIGITAL => {
+        BOUND_BUTTON_TYPE_ANALOG => {
             return Some(BoundButton::Analog {
                 axis: TAxis::try_from_primitive(button.value.analog.axis).ok()?,
                 threshold: button.value.analog.threshold,
@@ -293,19 +292,21 @@ unsafe fn convert_vector_binding(binding: CVectorBinding) -> Option<VectorBindin
     }
 }
 
+type CInputManager = *mut InputManager;
+
 #[no_mangle]
-unsafe extern "C" fn pawkit_input_manager_create() -> *mut InputManager {
+unsafe extern "C" fn pawkit_input_manager_create() -> CInputManager {
     return move_to_heap(InputManager::new());
 }
 
 #[no_mangle]
-unsafe extern "C" fn pawkit_input_manager_destroy(manager: *mut InputManager) {
+unsafe extern "C" fn pawkit_input_manager_destroy(manager: CInputManager) {
     drop_from_heap(manager);
 }
 
 #[no_mangle]
 unsafe extern "C" fn pawkit_input_manager_register_binding(
-    manager: *mut InputManager,
+    manager: CInputManager,
     name: *const c_char,
     kind: CBindingKind,
     bindings: *const CBinding,
@@ -377,10 +378,148 @@ unsafe extern "C" fn pawkit_input_manager_register_binding(
 }
 
 #[no_mangle]
-unsafe extern "C" fn pawkit_input_manager_lock_bindings(manager: *mut InputManager) {
+unsafe extern "C" fn pawkit_input_manager_lock_bindings(manager: CInputManager) {
     let Some(manager) = ptr_to_ref_mut(manager) else {
         return;
     };
 
     manager.lock();
+}
+
+#[no_mangle]
+unsafe extern "C" fn pawkit_input_manager_device_connected(
+    manager: CInputManager,
+    family: CInputFamily,
+    id: usize,
+) {
+    let Some(manager) = ptr_to_ref_mut(manager) else {
+        return;
+    };
+
+    match family {
+        INPUT_FAMILY_KEY => manager.keyboard_manager.device_connected(id),
+        INPUT_FAMILY_MOUSE => manager.mouse_manager.device_connected(id),
+        INPUT_FAMILY_JOY => manager.gamepad_manager.device_connected(id),
+        _ => 0,
+    };
+}
+
+#[no_mangle]
+unsafe extern "C" fn pawkit_input_manager_device_disconnected(
+    manager: CInputManager,
+    family: CInputFamily,
+    id: usize,
+) {
+    let Some(manager) = ptr_to_ref_mut(manager) else {
+        return;
+    };
+
+    match family {
+        INPUT_FAMILY_KEY => manager.keyboard_manager.device_disconnected_raw(id),
+        INPUT_FAMILY_MOUSE => manager.mouse_manager.device_disconnected_raw(id),
+        INPUT_FAMILY_JOY => manager.gamepad_manager.device_disconnected_raw(id),
+        _ => {}
+    };
+}
+
+type CInputDeviceState = *mut InputDeviceState;
+
+#[no_mangle]
+unsafe extern "C" fn pawkit_input_manager_get_state(
+    manager: CInputManager,
+    family: CInputFamily,
+    id: usize,
+) -> CInputDeviceState {
+    let Some(manager) = ptr_to_ref_mut(manager) else {
+        return null_mut();
+    };
+
+    return match family {
+        INPUT_FAMILY_KEY => manager.keyboard_manager.get_state_raw_mut(id),
+        INPUT_FAMILY_MOUSE => manager.mouse_manager.get_state_raw_mut(id),
+        INPUT_FAMILY_JOY => manager.gamepad_manager.get_state_raw_mut(id),
+        _ => None,
+    }
+    .map(|it| it as CInputDeviceState)
+    .unwrap_or(null_mut());
+}
+
+#[no_mangle]
+unsafe extern "C" fn pawkit_input_state_set_button(
+    state: CInputDeviceState,
+    button: CButton,
+    value: bool
+) {
+    let Some(state) = ptr_to_ref_mut(state) else {
+        return;
+    };
+
+    state.set_digital(button as usize, value);
+}
+
+#[no_mangle]
+unsafe extern "C" fn pawkit_input_state_set_axis(
+    state: CInputDeviceState,
+    axis: CAxis,
+    value: f32
+) {
+    let Some(state) = ptr_to_ref_mut(state) else {
+        return;
+    };
+
+    state.set_analog(axis as usize, value);
+}
+
+/// Feeling :uh: about that `'static`
+/// But there's no better way to do this.
+type CInputHandler = *mut InputHandler<'static>;
+
+#[no_mangle]
+unsafe extern "C" fn pawkit_input_manager_create_handler(manager: CInputManager) -> CInputHandler {
+    let Some(manager) = ptr_to_ref(manager) else {
+        return null_mut();
+    };
+
+    let Some(handler) = manager.create_handler() else {
+        return null_mut();
+    };
+
+    return move_to_heap(handler);
+}
+
+#[no_mangle]
+unsafe extern "C" fn pawkit_input_handler_destroy(handler: CInputHandler) {
+    drop_from_heap(handler);
+}
+
+#[no_mangle]
+unsafe extern "C" fn pawkit_input_handler_update(handler: CInputHandler) {
+    let Some(handler) = ptr_to_ref_mut(handler) else {
+        return;
+    };
+
+    handler.update();
+}
+
+#[no_mangle]
+unsafe extern "C" fn pawkit_input_handler_get_frame(handler: CInputHandler, name: *const c_char, frame: *mut InputFrame) -> bool {
+    let Some(handler) = ptr_to_ref_mut(handler) else {
+        return false;
+    };
+
+    let Some(frame) = ptr_to_ref_mut(frame) else {
+        return false;
+    };
+
+    let Some(name) = cstr_to_str(name) else {
+        return false;
+    };
+
+    let Some(new_frame) = handler.get_frame(name) else {
+        return false;
+    };
+
+    *frame = new_frame;
+
+    return true;
 }

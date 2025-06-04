@@ -207,11 +207,13 @@ bool pawkit_input_manager_register_binding(pawkit_input_manager_t manager, char 
 
 void pawkit_input_manager_lock_bindings(pawkit_input_manager_t manager);
 
-typedef void *pawkit_input_state_t;
-
 void pawkit_input_manager_device_connected(pawkit_input_manager_t manager, pawkit_input_family_t family, pawkit_usize id);
 void pawkit_input_manager_device_disconnected(pawkit_input_manager_t manager, pawkit_input_family_t family, pawkit_usize id);
+
+typedef void *pawkit_input_state_t;
+
 pawkit_input_state_t pawkit_input_manager_get_state(pawkit_input_manager_t manager, pawkit_input_family_t family, pawkit_usize id);
+
 void pawkit_input_state_set_button(pawkit_input_state_t state, pawkit_input_button_t button, bool value);
 void pawkit_input_state_set_axis(pawkit_input_state_t state, pawkit_input_axis_t axis, bool value);
 
