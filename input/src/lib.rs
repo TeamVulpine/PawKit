@@ -50,18 +50,24 @@ impl InputManager {
 
         for binding in &bindings.values {
             let value = match binding {
-                BindingList::Analog(_) => InputFrame::Analog {
-                    value: 0f32,
-                    delta: 0f32,
+                BindingList::Analog(_) => RawInputFrame {
+                    analog: AnalogInputFrame {
+                        value: 0f32,
+                        delta: 0f32,
+                    },
                 },
-                BindingList::Digital(_) => InputFrame::Digital {
-                    value: false,
-                    just_pressed: false,
-                    just_released: false,
+                BindingList::Digital(_) => RawInputFrame {
+                    digital: DigitalInputFrame {
+                        value: false,
+                        just_pressed: false,
+                        just_released: false,
+                    },
                 },
-                BindingList::Vector(_) => InputFrame::Vector {
-                    value: (0f32, 0f32),
-                    delta: (0f32, 0f32),
+                BindingList::Vector(_) => RawInputFrame {
+                    vector: VectorInputFrame {
+                        value: (0f32, 0f32),
+                        delta: (0f32, 0f32),
+                    },
                 },
             };
 
@@ -95,6 +101,36 @@ impl DerefMut for InputManager {
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+pub struct DigitalInputFrame {
+    pub value: bool,
+    pub just_pressed: bool,
+    pub just_released: bool,
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+pub struct AnalogInputFrame {
+    pub value: f32,
+    pub delta: f32,
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+pub struct VectorInputFrame {
+    pub value: (f32, f32),
+    pub delta: (f32, f32),
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union RawInputFrame {
+    pub digital: DigitalInputFrame,
+    pub analog: AnalogInputFrame,
+    pub vector: VectorInputFrame,
+}
+
+#[repr(C, u8)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub enum InputFrame {
     Digital {
         value: bool,
@@ -120,7 +156,7 @@ pub struct InputHandler<'a> {
     connected_keyboards: Vec<usize>,
     connected_mice: Vec<usize>,
     connected_gamepads: Vec<usize>,
-    frames: Box<[InputFrame]>,
+    frames: Box<[RawInputFrame]>,
 }
 
 impl<'a> InputHandler<'a> {
@@ -391,12 +427,8 @@ impl<'a> InputHandler<'a> {
 
             match value {
                 BindingList::Analog(bindings) => {
-                    let InputFrame::Analog {
-                        value: old_value, ..
-                    } = *frame
-                    else {
-                        continue;
-                    };
+                    // SAFETY: `self.frames` has the same layout as `self.bindings.values`, there isn't a need for a discriminator.
+                    let old_value = unsafe { frame.analog.value };
 
                     let mut value = 0f32;
                     for binding in bindings {
@@ -408,19 +440,17 @@ impl<'a> InputHandler<'a> {
                     }
 
                     // SAFETY: `self.frames` has the same size as `self.bindings.values`.
-                    *unsafe { self.frames.get_unchecked_mut(index) } = InputFrame::Analog {
-                        value,
-                        delta: value - old_value,
+                    *unsafe { self.frames.get_unchecked_mut(index) } = RawInputFrame {
+                        analog: AnalogInputFrame {
+                            value,
+                            delta: value - old_value,
+                        },
                     };
                 }
 
                 BindingList::Digital(bindings) => {
-                    let InputFrame::Digital {
-                        value: old_value, ..
-                    } = *frame
-                    else {
-                        continue;
-                    };
+                    // SAFETY: `self.frames` has the same layout as `self.bindings.values`, there isn't a need for a discriminator.
+                    let old_value = unsafe { frame.digital.value };
 
                     let mut value = false;
                     for binding in bindings {
@@ -433,20 +463,18 @@ impl<'a> InputHandler<'a> {
                     }
 
                     // SAFETY: `self.frames` has the same size as `self.bindings.values`.
-                    *unsafe { self.frames.get_unchecked_mut(index) } = InputFrame::Digital {
-                        value,
-                        just_pressed: value && !old_value,
-                        just_released: !value && old_value,
+                    *unsafe { self.frames.get_unchecked_mut(index) } = RawInputFrame {
+                        digital: DigitalInputFrame {
+                            value,
+                            just_pressed: value && !old_value,
+                            just_released: !value && old_value,
+                        },
                     };
                 }
 
                 BindingList::Vector(bindings) => {
-                    let InputFrame::Vector {
-                        value: old_value, ..
-                    } = *frame
-                    else {
-                        continue;
-                    };
+                    // SAFETY: `self.frames` has the same layout as `self.bindings.values`, there isn't a need for a discriminator.
+                    let old_value = unsafe { frame.vector.value };
 
                     let mut value = (0f32, 0f32);
                     for binding in bindings {
@@ -458,22 +486,50 @@ impl<'a> InputHandler<'a> {
                     }
 
                     // SAFETY: `self.frames` has the same size as `self.bindings.values`.
-                    *unsafe { self.frames.get_unchecked_mut(index) } = InputFrame::Vector {
-                        value,
-                        delta: Self::vec_sub(value, old_value),
+                    *unsafe { self.frames.get_unchecked_mut(index) } = RawInputFrame {
+                        vector: VectorInputFrame {
+                            value,
+                            delta: Self::vec_sub(value, old_value),
+                        },
                     };
                 }
             }
         }
     }
 
-    pub fn get_frame(&self, name: &str) -> Option<&InputFrame> {
+    pub fn get_frame_raw(&self, name: &str) -> Option<RawInputFrame> {
         let index = *self.bindings.default.index.get(name)?;
 
         // SAFETY: `self.frames` has the same size as `self.bindings.values`,
         // and `self.bindings.default.index` only contains indices into that slice.
         unsafe {
-            return Some(self.frames.get_unchecked(index));
+            return Some(*self.frames.get_unchecked(index));
+        }
+    }
+
+    pub fn get_frame(&self, name: &str) -> Option<InputFrame> {
+        let index = *self.bindings.default.index.get(name)?;
+
+        // SAFETY: `self.frames` has the same size as `self.bindings.values`.
+        let raw = unsafe { self.frames.get_unchecked(index) };
+
+        // SAFETY: The variant of `BindingList` at `index` matches the union field accessed.
+        unsafe {
+            return Some(match self.bindings.default.values[index] {
+                BindingList::Analog(_) => InputFrame::Analog {
+                    value: raw.analog.value,
+                    delta: raw.analog.delta,
+                },
+                BindingList::Vector(_) => InputFrame::Vector {
+                    value: raw.vector.value,
+                    delta: raw.vector.delta,
+                },
+                BindingList::Digital(_) => InputFrame::Digital {
+                    value: raw.digital.value,
+                    just_pressed: raw.digital.just_pressed,
+                    just_released: raw.digital.just_released,
+                },
+            });
         }
     }
 

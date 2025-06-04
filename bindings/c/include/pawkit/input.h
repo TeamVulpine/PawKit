@@ -207,6 +207,12 @@ bool pawkit_input_manager_register_binding(pawkit_input_manager_t manager, char 
 
 void pawkit_input_manager_lock_bindings(pawkit_input_manager_t manager);
 
+enum {
+    PAWKIT_INPUT_FRAME_TYPE_DIGITAL,
+    PAWKIT_INPUT_FRAME_TYPE_ANALOG,
+    PAWKIT_INPUT_FRAME_TYPE_VECTOR,
+};
+
 #ifdef __cplusplus
 }
 #endif

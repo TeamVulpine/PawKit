@@ -8,7 +8,8 @@ use pawkit_net::{NetClientPeerEvent, NetHostPeerEvent, SimpleNetClientPeer, Simp
 use pawkit_net_signaling::model::HostId;
 
 use crate::{
-    c_enum, cstr_to_str, disown_str_to_cstr, drop_cstr, drop_from_heap, move_to_heap, ptr_to_ref, ptr_to_slice
+    c_enum, cstr_to_str, disown_str_to_cstr, drop_cstr, drop_from_heap, move_to_heap, ptr_to_ref,
+    ptr_to_slice,
 };
 
 #[no_mangle]
