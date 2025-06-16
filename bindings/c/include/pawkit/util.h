@@ -28,3 +28,50 @@ typedef ptrdiff_t pawkit_isize;
 
 typedef float pawkit_f32;
 typedef double pawkit_f64;
+
+#ifdef __cplusplus
+
+#include <memory>
+#include <concepts>
+#include <functional>
+
+namespace PawKit {
+    template <std::same_as<void *> T>
+    inline void NullDeleter(T ptr) {}
+
+    template <std::same_as<void *> T>
+    struct OpaqueHolder {
+        using Ptr = T;
+
+        private:
+        Ptr ptr;
+
+        public:
+        inline OpaqueHolder(Ptr ptr) : ptr(ptr) {}
+
+        inline operator Ptr () {
+            return ptr;
+        }
+
+        inline operator Ptr () const {
+            return ptr;
+        }
+    };
+    
+    template <std::same_as<void *> T>
+    struct OpaqueShared : std::shared_ptr<void> {
+        using Ptr = T;
+
+        inline OpaqueShared(Ptr ptr, std::function<void (Ptr)> destruct) : shared_ptr(ptr, destruct) {}
+
+        inline operator Ptr () {
+            return get();
+        }
+
+        inline operator Ptr () const {
+            return get();
+        }
+    };
+}
+
+#endif

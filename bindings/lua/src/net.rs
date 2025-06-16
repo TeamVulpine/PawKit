@@ -2,34 +2,32 @@ use mlua::prelude::*;
 use pawkit_net::{NetClientPeerEvent, NetHostPeerEvent, SimpleNetClientPeer, SimpleNetHostPeer};
 use pawkit_net_signaling::model::HostId;
 
+use crate::lua_enum;
+
+lua_enum!(host_events {
+    PeerConnected = LuaNetHostPeerEvent::PEER_CONNECTED,
+    PeerDisconnected = LuaNetHostPeerEvent::PEER_DISCONNECTED,
+    PacketReceived = LuaNetHostPeerEvent::PACKET_RECEIVED,
+    HostIdUpdated = LuaNetHostPeerEvent::HOST_ID_UPDATED,
+});
+
+lua_enum!(client_events {
+    Connected = LuaNetClientPeerEvent::CONNECTED,
+    Disconnected = LuaNetClientPeerEvent::DISCONNECTED,
+    ConnectionFailed = LuaNetClientPeerEvent::CONNECTION_FAILED,
+    PacketReceived = LuaNetClientPeerEvent::PACKET_RECEIVED,
+});
+
 pub(crate) fn init(lua: &Lua) -> LuaResult<LuaTable> {
     let exports = lua.create_table()?;
 
     exports.set("host", lua.create_function(host)?)?;
 
-    {
-        let host_events = lua.create_table()?;
-        host_events.set("peer_connected", LuaNetHostPeerEvent::PEER_CONNECTED)?;
-        host_events.set("peer_disconnected", LuaNetHostPeerEvent::PEER_DISCONNECTED)?;
-        host_events.set("packet_recieved", LuaNetHostPeerEvent::PACKET_RECEIVED)?;
-        host_events.set("host_id_updated", LuaNetHostPeerEvent::HOST_ID_UPDATED)?;
-
-        exports.set("host_events", host_events)?;
-    }
+    exports.set("host_events", host_events(lua)?)?;
 
     exports.set("connect", lua.create_function(connect)?)?;
 
-    {
-        let client_events = lua.create_table()?;
-        client_events.set("connected", LuaNetClientPeerEvent::CONNECTED)?;
-        client_events.set("disconnected", LuaNetClientPeerEvent::DISCONNECTED)?;
-        client_events.set(
-            "connection_failed",
-            LuaNetClientPeerEvent::CONNECTION_FAILED,
-        )?;
-        client_events.set("packet_received", LuaNetClientPeerEvent::PACKET_RECEIVED)?;
-        exports.set("client_events", client_events)?;
-    }
+    exports.set("client_events", client_events(lua)?)?;
 
     return Ok(exports);
 }

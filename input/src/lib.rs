@@ -408,6 +408,19 @@ impl<'a> InputHandler<'a> {
         .push(id);
     }
 
+    pub fn connect_device_raw(&mut self, family: InputFamily, id: usize) {
+        let Some(id) = match family {
+            InputFamily::Gamepad => &self.manager.gamepad_manager,
+            InputFamily::Keyboard => &self.manager.keyboard_manager,
+            InputFamily::Mouse => &self.manager.mouse_manager,
+        }
+        .raw_id_to_id(id) else {
+            return;
+        };
+
+        self.connect_device(family, id);
+    }
+
     pub fn disconnect_device(&mut self, family: InputFamily, id: usize) {
         let vec = match family {
             InputFamily::Gamepad => &mut self.connected_gamepads,
@@ -416,5 +429,18 @@ impl<'a> InputHandler<'a> {
         };
 
         vec.iter().position(|it| *it == id).map(|it| vec.remove(it));
+    }
+
+    pub fn disconnect_device_raw(&mut self, family: InputFamily, id: usize) {
+        let Some(id) = match family {
+            InputFamily::Gamepad => &self.manager.gamepad_manager,
+            InputFamily::Keyboard => &self.manager.keyboard_manager,
+            InputFamily::Mouse => &self.manager.mouse_manager,
+        }
+        .raw_id_to_id(id) else {
+            return;
+        };
+
+        self.disconnect_device(family, id);
     }
 }

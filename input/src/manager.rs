@@ -1,6 +1,12 @@
+use num_enum::TryFromPrimitive;
 use pawkit_bitarray::BitArray;
 use pawkit_holy_array::HolyArray;
+use serde::{Deserialize, Serialize};
 
+#[repr(u8)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TryFromPrimitive,
+)]
 pub enum InputFamily {
     Keyboard,
     Mouse,

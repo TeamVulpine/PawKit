@@ -14,5 +14,6 @@ crate-type = ["cdylib"]
 pawkit-logger.workspace = true
 pawkit-net.workspace = true
 pawkit-net-signaling.workspace = true
+pawkit-input.workspace = true
 
 mlua.workspace = true

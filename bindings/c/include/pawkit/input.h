@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util.h"
+#include "assert.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -203,7 +204,7 @@ typedef void *pawkit_input_manager_t;
 pawkit_input_manager_t pawkit_input_manager_create();
 void pawkit_input_manager_destroy(pawkit_input_manager_t manager);
 
-bool pawkit_input_manager_register_binding(pawkit_input_manager_t manager, char *name, pawkit_input_binding_type_t type, pawkit_input_binding_t *binding, pawkit_usize count);
+bool pawkit_input_manager_register_binding(pawkit_input_manager_t manager, char const *name, pawkit_input_binding_type_t type, pawkit_input_binding_t const *binding, pawkit_usize count);
 
 void pawkit_input_manager_lock_bindings(pawkit_input_manager_t manager);
 
@@ -215,7 +216,7 @@ typedef void *pawkit_input_state_t;
 pawkit_input_state_t pawkit_input_manager_get_state(pawkit_input_manager_t manager, pawkit_input_family_t family, pawkit_usize id);
 
 void pawkit_input_state_set_button(pawkit_input_state_t state, pawkit_input_button_t button, bool value);
-void pawkit_input_state_set_axis(pawkit_input_state_t state, pawkit_input_axis_t axis, bool value);
+void pawkit_input_state_set_axis(pawkit_input_state_t state, pawkit_input_axis_t axis, pawkit_f32 value);
 
 typedef void *pawkit_input_handler_t;
 
@@ -256,6 +257,91 @@ typedef struct pawkit_input_frame_t {
 
 bool pawkit_input_handler_get_frame(pawkit_input_handler_t handler, char const *binding, pawkit_input_frame_t *frame);
 
+void pawkit_input_handler_connect_device(pawkit_input_handler_t handler, pawkit_input_family_t family, pawkit_usize id);
+void pawkit_input_handler_disconnect_device(pawkit_input_handler_t handler, pawkit_input_family_t family, pawkit_usize id);
+
 #ifdef __cplusplus
 }
+
+#include <string>
+#include <span>
+
+namespace PawKit::Input {
+    using Button = pawkit_input_button_t;
+    using Axis = pawkit_input_axis_t;
+    using Family = pawkit_input_family_t;
+    using BindingType = pawkit_input_binding_type_t;
+    using Binding = pawkit_input_binding_t;
+    using Frame = pawkit_input_frame_t;
+
+    struct State : OpaqueHolder<pawkit_input_state_t> {
+        friend struct Manager;
+
+        private:
+        inline State(Ptr state) : OpaqueHolder(state) {}
+
+        public:
+        inline void SetButton(Button button, bool value) {
+            pawkit_input_state_set_button(*this, button, value);
+        }
+
+        inline void SetAxis(Axis axis, pawkit_f32 value) {
+            pawkit_input_state_set_axis(*this, axis, value);
+        }
+    };
+
+    struct Handler : OpaqueShared<pawkit_input_handler_t> {
+        friend struct Manager;
+
+        private:
+        inline Handler(Ptr handler) : OpaqueShared(handler, pawkit_input_handler_destroy) {}
+
+        public:
+        void Update() {
+            pawkit_input_handler_update(*this);
+        }
+
+        bool GetFrame(std::string &&binding, Frame &frame) {
+            return pawkit_input_handler_get_frame(*this, binding.c_str(), &frame);
+        }
+
+        void ConnectDevice(Family family, pawkit_usize id) {
+            pawkit_input_handler_connect_device(*this, family, id);
+        }
+
+        void DisconnectDevice(Family family, pawkit_usize id) {
+            pawkit_input_handler_disconnect_device(*this, family, id);
+        }
+    };
+
+    struct Manager : OpaqueShared<pawkit_input_handler_t>  {
+        inline Manager() : OpaqueShared(pawkit_input_manager_create(), pawkit_input_manager_destroy) {}
+
+        public:
+        inline bool RegisterBinding(std::string &&name, BindingType type, std::span<Binding> bindings) {
+            return pawkit_input_manager_register_binding(*this, name.c_str(), type, bindings.data(), bindings.size());
+        }
+
+        inline void LockBindings() {
+            pawkit_input_manager_lock_bindings(*this);
+        }
+
+        inline void DeviceConnected(Family family, pawkit_usize id) {
+            pawkit_input_manager_device_connected(*this, family, id);
+        }
+
+        inline void DeviceDisconnected(Family family, pawkit_usize id) {
+            pawkit_input_manager_device_disconnected(*this, family, id);
+        }
+
+        inline State GetState(Family family, pawkit_usize id) {
+            return State(pawkit_input_manager_get_state(*this, family, id));
+        }
+
+        inline Handler CreateHandler() {
+            return Handler(pawkit_input_manager_create_handler(*this));
+        }
+    };
+}
+
 #endif

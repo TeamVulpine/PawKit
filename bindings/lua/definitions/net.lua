@@ -1,34 +1,5 @@
 ---@meta
 
----@class pawkit
-local pawkit = {}
-
----@class pawkit.logger
-local logger = {}
-
----@param message string
-function logger.print_to_console(message) end
-
----@param message string
-function logger.print_to_logfile(message) end
-
----@param message string
-function logger.info(message) end
-
----@param message string
-function logger.debug(message) end
-
----@param message string
-function logger.warn(message) end
-
----@param message string
-function logger.error(message) end
-
----@param message string
-function logger.fatal(message) end
-
-pawkit.logger = logger
-
 ---@class pawkit.net
 local net = {}
 
@@ -44,27 +15,19 @@ function net.host(server_url, game_id, request_proxy) end
 function net.connect(game_id, host_id) end
 
 ---@class pawkit.net.host_events
----@field peer_connected integer
----@field peer_disconnected integer
----@field packet_recieved integer
----@field host_id_updated integer
 net.host_events = {
-  peer_connected = 0,
-  peer_disconnected = 1,
-  packet_recieved = 2,
-  host_id_updated = 3
+    PeerConnected = 0,
+    PeerDisconnected = 1,
+    PacketRecieved = 2,
+    HostIdUpdated = 3
 }
 
 ---@class pawkit.net.client_events
----@field connected integer
----@field disconnected integer
----@field connection_failed integer
----@field packet_received integer
 net.client_events = {
-  connected = 0,
-  disconnected = 1,
-  connection_failed = 2,
-  packet_received = 3
+    Connected = 0,
+    Disconnected = 1,
+    ConnectionFailed = 2,
+    PacketRecieved = 3
 }
 
 ---@class pawkit.net.NetHostPeer
@@ -114,6 +77,4 @@ function NetClientPeerEvent:get_type() end
 ---@return string|nil
 function NetClientPeerEvent:get_data() end
 
-pawkit.net = net
-
-return pawkit
+return net

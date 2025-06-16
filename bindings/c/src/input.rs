@@ -5,11 +5,15 @@ use pawkit_input::{
     bindings::{
         AnalogBinding, AnalogBindingKind, BoundAxis, BoundButton, DefaultBindingType,
         DigitalBinding, VectorBinding, VectorBindingKind,
-    }, manager::InputDeviceState, InputFrame, InputHandler, InputManager
+    },
+    manager::{InputDeviceState, InputFamily},
+    InputFrame, InputHandler, InputManager,
 };
 use serde::Serialize;
 
-use crate::{c_enum, cstr_to_str, drop_from_heap, move_to_heap, ptr_to_ref, ptr_to_ref_mut, ptr_to_slice};
+use crate::{
+    c_enum, cstr_to_str, drop_from_heap, move_to_heap, ptr_to_ref, ptr_to_ref_mut, ptr_to_slice,
+};
 
 c_enum!(CInputFamily: u8 {
     INPUT_FAMILY_KEY,
@@ -448,7 +452,7 @@ unsafe extern "C" fn pawkit_input_manager_get_state(
 unsafe extern "C" fn pawkit_input_state_set_button(
     state: CInputDeviceState,
     button: CButton,
-    value: bool
+    value: bool,
 ) {
     let Some(state) = ptr_to_ref_mut(state) else {
         return;
@@ -461,7 +465,7 @@ unsafe extern "C" fn pawkit_input_state_set_button(
 unsafe extern "C" fn pawkit_input_state_set_axis(
     state: CInputDeviceState,
     axis: CAxis,
-    value: f32
+    value: f32,
 ) {
     let Some(state) = ptr_to_ref_mut(state) else {
         return;
@@ -502,7 +506,11 @@ unsafe extern "C" fn pawkit_input_handler_update(handler: CInputHandler) {
 }
 
 #[no_mangle]
-unsafe extern "C" fn pawkit_input_handler_get_frame(handler: CInputHandler, name: *const c_char, frame: *mut InputFrame) -> bool {
+unsafe extern "C" fn pawkit_input_handler_get_frame(
+    handler: CInputHandler,
+    name: *const c_char,
+    frame: *mut InputFrame,
+) -> bool {
     let Some(handler) = ptr_to_ref_mut(handler) else {
         return false;
     };
@@ -522,4 +530,38 @@ unsafe extern "C" fn pawkit_input_handler_get_frame(handler: CInputHandler, name
     *frame = new_frame;
 
     return true;
+}
+
+#[no_mangle]
+unsafe extern "C" fn pawkit_input_handler_connect_device(
+    handler: CInputHandler,
+    family: CInputFamily,
+    id: usize,
+) {
+    let Some(handler) = ptr_to_ref_mut(handler) else {
+        return;
+    };
+
+    let Ok(family) = InputFamily::try_from_primitive(family) else {
+        return;
+    };
+
+    handler.connect_device_raw(family, id);
+}
+
+#[no_mangle]
+unsafe extern "C" fn pawkit_input_handler_disconnect_device(
+    handler: CInputHandler,
+    family: CInputFamily,
+    id: usize,
+) {
+    let Some(handler) = ptr_to_ref_mut(handler) else {
+        return;
+    };
+
+    let Ok(family) = InputFamily::try_from_primitive(family) else {
+        return;
+    };
+
+    handler.disconnect_device_raw(family, id);
 }
