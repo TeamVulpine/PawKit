@@ -98,6 +98,20 @@ impl DefaultBindingMap {
         return Ok(index);
     }
 
+    pub fn delete_instance(&self, id: usize) -> Result<(), BindingMapError> {
+        if !self.locked {
+            return Err(BindingMapError::InstantiationWhileUnlocked);
+        }
+
+        let Ok(mut instances) = self.instances.write() else {
+            return Err(BindingMapError::LockIssue);
+        };
+
+        instances.release(id);
+
+        return Ok(());
+    }
+
     pub fn get_map(&self, index: usize) -> Option<Arc<BindingMap>> {
         let instances = self.instances.read().ok()?;
 

@@ -88,6 +88,7 @@ impl InputManager {
         };
 
         return Some(handlers.acquire(InputHandler {
+            binding_index: index,
             connected_keyboards: RwLock::new(Vec::new()),
             connected_mice: RwLock::new(Vec::new()),
             connected_gamepads: RwLock::new(Vec::new()),
@@ -101,6 +102,7 @@ impl InputManager {
         };
 
         handlers.release(handler);
+        let _ = self.bindings.delete_instance(handler);
     }
 
     pub fn update(&self) {
@@ -108,12 +110,8 @@ impl InputManager {
             return;
         };
 
-        for i in 0..handlers.len() {
-            let Some(handler) = handlers.get(i) else {
-                continue;
-            };
-
-            let Some(map) = self.bindings.get_map(i) else {
+        for handler in &*handlers {
+            let Some(map) = self.bindings.get_map(handler.binding_index) else {
                 continue;
             };
 
@@ -219,6 +217,7 @@ pub enum InputFrame {
 ///
 /// It manages its own bindings and keeps track of the devices it's using.
 pub struct InputHandler {
+    binding_index: usize,
     connected_keyboards: RwLock<Vec<usize>>,
     connected_mice: RwLock<Vec<usize>>,
     connected_gamepads: RwLock<Vec<usize>>,
