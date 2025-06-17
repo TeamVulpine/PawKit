@@ -95,12 +95,12 @@ impl InputManager {
         }));
     }
 
-    pub fn destroy_handler(&self, device: usize) {
+    pub fn destroy_handler(&self, handler: usize) {
         let Ok(mut handlers) = self.handlers.write() else {
             return;
         };
 
-        handlers.release(device);
+        handlers.release(handler);
     }
 
     pub fn update(&self) {
@@ -120,6 +120,67 @@ impl InputManager {
             handler.update(&self.devices, &map);
         }
     }
+
+    pub fn get_frame(&self, handler: usize, name: &str) -> Option<InputFrame> {
+        let handlers = self.handlers.read().ok()?;
+
+        let handler = handlers.get(handler)?;
+
+        return handler.get_frame(&self.bindings.index, name);
+    }
+
+    pub fn connect_device_to_handler(&self, handler: usize, family: InputFamily, id: usize) {
+        let Ok(handlers) = self.handlers.read() else {
+            return;
+        };
+
+        let Some(handler) = handlers.get(handler) else {
+            return;
+        };
+
+        handler.connect_device(family, id);
+    }
+
+    pub fn connect_device_to_handler_raw(&self, handler: usize, family: InputFamily, id: usize) {
+        let Ok(handlers) = self.handlers.read() else {
+            return;
+        };
+
+        let Some(handler) = handlers.get(handler) else {
+            return;
+        };
+
+        handler.connect_device_raw(&self.devices, family, id);
+    }
+
+    pub fn disconnect_device_from_handler(&self, handler: usize, family: InputFamily, id: usize) {
+        let Ok(handlers) = self.handlers.read() else {
+            return;
+        };
+
+        let Some(handler) = handlers.get(handler) else {
+            return;
+        };
+
+        handler.disconnect_device(family, id);
+    }
+
+    pub fn disconnect_device_from_handler_raw(
+        &self,
+        handler: usize,
+        family: InputFamily,
+        id: usize,
+    ) {
+        let Ok(handlers) = self.handlers.read() else {
+            return;
+        };
+
+        let Some(handler) = handlers.get(handler) else {
+            return;
+        };
+
+        handler.disconnect_device_raw(&self.devices, family, id);
+    }
 }
 
 impl Deref for InputManager {
@@ -137,7 +198,7 @@ impl DerefMut for InputManager {
 }
 
 #[repr(C, u8)]
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum InputFrame {
     Digital {
         value: bool,
@@ -295,7 +356,6 @@ impl InputHandler {
     }
 
     fn get_binding_digital(&self, managers: &InputDeviceManagers, button: &DigitalBinding) -> bool {
-
         return match button {
             DigitalBinding::Gamepad(gamepad) => {
                 let Ok(devices) = self.connected_gamepads.read() else {
@@ -310,18 +370,14 @@ impl InputHandler {
                     return false;
                 };
 
-                Self::get_bound_button(
-                    &managers.keyboard_manager,
-                    keyboard,
-                    &devices,
-                )
-            },
+                Self::get_bound_button(&managers.keyboard_manager, keyboard, &devices)
+            }
 
             DigitalBinding::Mouse(mouse) => {
                 let Ok(devices) = self.connected_mice.read() else {
                     return false;
                 };
-                
+
                 Self::get_bound_button(&managers.mouse_manager, mouse, &devices)
             }
         };
@@ -342,18 +398,14 @@ impl InputHandler {
                     return 0f32;
                 };
 
-                Self::get_bound_axis(
-                    &managers.keyboard_manager,
-                    keyboard,
-                    &devices,
-                )
-            },
+                Self::get_bound_axis(&managers.keyboard_manager, keyboard, &devices)
+            }
 
             AnalogBindingKind::Mouse(mouse) => {
                 let Ok(devices) = self.connected_mice.read() else {
                     return 0f32;
                 };
-                
+
                 Self::get_bound_axis(&managers.mouse_manager, mouse, &devices)
             }
         };
@@ -374,7 +426,7 @@ impl InputHandler {
                     Self::get_bound_axis(&managers.gamepad_manager, x, &devices),
                     Self::get_bound_axis(&managers.gamepad_manager, y, &devices),
                 )
-            },
+            }
 
             VectorBindingKind::Keyboard { x, y } => {
                 let Ok(devices) = self.connected_keyboards.read() else {
@@ -385,18 +437,18 @@ impl InputHandler {
                     Self::get_bound_axis(&managers.keyboard_manager, x, &devices),
                     Self::get_bound_axis(&managers.keyboard_manager, y, &devices),
                 )
-            },
+            }
 
             VectorBindingKind::Mouse { x, y } => {
                 let Ok(devices) = self.connected_mice.read() else {
                     return (0f32, 0f32);
                 };
-                
+
                 (
                     Self::get_bound_axis(&managers.mouse_manager, x, &devices),
                     Self::get_bound_axis(&managers.mouse_manager, y, &devices),
                 )
-            },
+            }
         };
     }
 
@@ -506,7 +558,7 @@ impl InputHandler {
         }
     }
 
-    pub fn get_frame(&self, index: HashMap<String, usize>, name: &str) -> Option<InputFrame> {
+    pub fn get_frame(&self, index: &HashMap<String, usize>, name: &str) -> Option<InputFrame> {
         let index = match index.get(name) {
             Some(index) => index,
             None => return None,
@@ -520,7 +572,8 @@ impl InputHandler {
             InputFamily::Gamepad => &self.connected_gamepads,
             InputFamily::Keyboard => &self.connected_keyboards,
             InputFamily::Mouse => &self.connected_mice,
-        }.write() else {
+        }
+        .write() else {
             return;
         };
 
@@ -528,7 +581,7 @@ impl InputHandler {
     }
 
     pub fn connect_device_raw(
-        &mut self,
+        &self,
         managers: &InputDeviceManagers,
         family: InputFamily,
         id: usize,
@@ -545,20 +598,24 @@ impl InputHandler {
         self.connect_device(family, id);
     }
 
-    pub fn disconnect_device(&mut self, family: InputFamily, id: usize) {
+    pub fn disconnect_device(&self, family: InputFamily, id: usize) {
         let Ok(mut devices) = match family {
             InputFamily::Gamepad => &self.connected_gamepads,
             InputFamily::Keyboard => &self.connected_keyboards,
             InputFamily::Mouse => &self.connected_mice,
-        }.write() else {
+        }
+        .write() else {
             return;
         };
 
-        devices.iter().position(|it| *it == id).map(|it| devices.remove(it));
+        devices
+            .iter()
+            .position(|it| *it == id)
+            .map(|it| devices.remove(it));
     }
 
     pub fn disconnect_device_raw(
-        &mut self,
+        &self,
         managers: &InputDeviceManagers,
         family: InputFamily,
         id: usize,

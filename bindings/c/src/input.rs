@@ -7,7 +7,7 @@ use pawkit_input::{
         DigitalBinding, VectorBinding, VectorBindingKind,
     },
     manager::{InputDeviceState, InputFamily},
-    InputFrame, InputHandler, InputManager,
+    InputFrame, InputManager,
 };
 use serde::Serialize;
 
@@ -492,72 +492,80 @@ unsafe extern "C" fn pawkit_input_manager_create_handler(
     return true;
 }
 
-// #[no_mangle]
-// unsafe extern "C" fn pawkit_input_handler_update(handler: CInputHandler) {
-//     let Some(handler) = ptr_to_ref_mut(handler) else {
-//         return;
-//     };
+#[no_mangle]
+unsafe extern "C" fn pawkit_input_manager_destroy_handler(manager: CInputManager, handler: usize) {
+    let Some(manager) = ptr_to_ref(manager) else {
+        return;
+    };
 
-//     handler.update();
-// }
+    manager.destroy_handler(handler);
+}
 
-// #[no_mangle]
-// unsafe extern "C" fn pawkit_input_handler_get_frame(
-//     handler: CInputHandler,
-//     name: *const c_char,
-//     frame: *mut InputFrame,
-// ) -> bool {
-//     let Some(handler) = ptr_to_ref_mut(handler) else {
-//         return false;
-//     };
+#[no_mangle]
+unsafe extern "C" fn pawkit_input_manager_update(manager: CInputManager) {
+    let Some(manager) = ptr_to_ref(manager) else {
+        return;
+    };
 
-//     let Some(frame) = ptr_to_ref_mut(frame) else {
-//         return false;
-//     };
+    manager.update();
+}
 
-//     let Some(name) = cstr_to_str(name) else {
-//         return false;
-//     };
+#[no_mangle]
+unsafe extern "C" fn pawkit_input_manager_get_frame(
+    manager: CInputManager,
+    handler: usize,
+    name: *const c_char,
+    in_frame: *mut InputFrame,
+) -> bool {
+    let Some(manager) = ptr_to_ref(manager) else {
+        return false;
+    };
 
-//     let Some(new_frame) = handler.get_frame(name) else {
-//         return false;
-//     };
+    let Some(name) = cstr_to_str(name) else {
+        return false;
+    };
 
-//     *frame = new_frame;
+    let Some(frame) = manager.get_frame(handler, name) else {
+        return false;
+    };
 
-//     return true;
-// }
+    *in_frame = frame;
 
-// #[no_mangle]
-// unsafe extern "C" fn pawkit_input_handler_connect_device(
-//     handler: CInputHandler,
-//     family: CInputFamily,
-//     id: usize,
-// ) {
-//     let Some(handler) = ptr_to_ref_mut(handler) else {
-//         return;
-//     };
+    return true;
+}
 
-//     let Ok(family) = InputFamily::try_from_primitive(family) else {
-//         return;
-//     };
+#[no_mangle]
+unsafe extern "C" fn pawkit_input_manager_connect_device_to_handler(
+    manager: CInputManager,
+    handler: usize,
+    family: CInputFamily,
+    id: usize,
+) {
+    let Some(manager) = ptr_to_ref(manager) else {
+        return;
+    };
 
-//     handler.connect_device_raw(family, id);
-// }
+    let Ok(family) = InputFamily::try_from_primitive(family) else {
+        return;
+    };
 
-// #[no_mangle]
-// unsafe extern "C" fn pawkit_input_handler_disconnect_device(
-//     handler: CInputHandler,
-//     family: CInputFamily,
-//     id: usize,
-// ) {
-//     let Some(handler) = ptr_to_ref_mut(handler) else {
-//         return;
-//     };
+    manager.connect_device_to_handler_raw(handler, family, id);
+}
 
-//     let Ok(family) = InputFamily::try_from_primitive(family) else {
-//         return;
-//     };
+#[no_mangle]
+unsafe extern "C" fn pawkit_input_manager_disconnect_device_from_handler(
+    manager: CInputManager,
+    handler: usize,
+    family: CInputFamily,
+    id: usize,
+) {
+    let Some(manager) = ptr_to_ref(manager) else {
+        return;
+    };
 
-//     handler.disconnect_device_raw(family, id);
-// }
+    let Ok(family) = InputFamily::try_from_primitive(family) else {
+        return;
+    };
+
+    manager.disconnect_device_from_handler(handler, family, id);
+}

@@ -54,7 +54,7 @@ impl InputDeviceManager {
 
     pub fn raw_id_to_id(&self, raw_id: usize) -> Option<usize> {
         let devices = self.devices.read().ok()?;
-        
+
         for id in 0..devices.len() {
             let Some(device) = devices.get(id) else {
                 continue;
@@ -114,7 +114,7 @@ impl InputDeviceState {
         return analog[axis];
     }
 
-    pub fn get_digital(&self, button: usize) -> bool {  
+    pub fn get_digital(&self, button: usize) -> bool {
         let digital = self.digital_inputs.read().unwrap();
 
         return digital.get(button).unwrap();

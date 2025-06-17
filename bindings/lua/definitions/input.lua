@@ -374,41 +374,110 @@ local InputManager = {}
 
 ---@param name string
 ---@param bindings DigitalBinding[]
-function InputManager:register_digital_binding(name, bindings) end
+function InputManager:register_digital_binding(name, bindings)
+end
 
 ---@param name string
 ---@param bindings AnalogBinding[]
 ---@return nil
-function InputManager:register_analog_binding(name, bindings) end
+function InputManager:register_analog_binding(name, bindings)
+end
 
 ---@param name string
 ---@param bindings VectorBinding[]
 ---@return nil
-function InputManager:register_vector_binding(name, bindings) end
+function InputManager:register_vector_binding(name, bindings)
+end
 
 ---@return nil
-function InputManager:lock_bindings() end
+function InputManager:lock_bindings()
+end
 
 ---@param family InputFamily
 ---@param id RawDeviceId
 ---@return DeviceId
-function InputManager:device_connected(family, id) end
+function InputManager:device_connected(family, id)
+end
 
 ---@param family InputFamily
 ---@param id DeviceId
 ---@return nil
-function InputManager:device_disconnected(family, id) end
+function InputManager:device_disconnected(family, id)
+end
 
 ---@param family InputFamily
 ---@param device DeviceId
 ---@param button KeyboardButton | MouseButton | GamepadButton
 ---@param value boolean
-function InputManager:set_button(family, device, button, value) end
+function InputManager:set_button(family, device, button, value)
+end
 
 ---@param family InputFamily
 ---@param device DeviceId
 ---@param button MouseAxis | GamepadAxis
 ---@param value number
-function InputManager:set_axis(family, device, button, value) end
+function InputManager:set_axis(family, device, button, value)
+end
+
+---@alias InputHandlerId integer
+
+---@return InputHandlerId
+function InputManager:create_handler()
+end
+
+---@param handler InputHandlerId
+function InputManager:destroy_handler(handler)
+end
+
+function InputManager:update()
+end
+
+---@class DigitalInputFrame
+---@field value boolean
+---@field just_pressed boolean
+---@field just_released boolean
+
+---@class AnalogInputFrame
+---@field value number
+---@field delta number
+
+---@class VectorInputFrame
+---@field value [number, number]
+---@field delta [number, number]
+
+---@class InputFrame
+---@field Digital? DigitalInputFrame
+---@field Analog? AnalogInputFrame
+---@field Vector? VectorInputFrame
+
+---@param handler InputHandlerId
+---@param binding string
+---@return InputFrame
+function InputManager:get_frame(handler, binding)
+end
+
+---@param handler InputHandlerId
+---@param family InputFamily
+---@param device DeviceId
+function InputManager:connect_device_to_handler(handler, family, device)
+end
+
+---@param handler InputHandlerId
+---@param family InputFamily
+---@param device DeviceId
+function InputManager:disconnect_device_from_handler(handler, family, device)
+end
+
+---@param handler InputHandlerId
+---@param family InputFamily
+---@param device DeviceId
+function InputManager:connect_device_to_handler(handler, family, device)
+end
+
+---@param handler InputHandlerId
+---@param family InputFamily
+---@param device DeviceId
+function InputManager:disconnect_device_from_handler(handler, family, device)
+end
 
 return input

@@ -119,7 +119,9 @@ impl DefaultBindingMap {
 
         let binding_list = match bindings {
             DefaultBindingType::Analog(analog) => BindingList::Analog(RwLock::new(analog.to_vec())),
-            DefaultBindingType::Digital(digital) => BindingList::Digital(RwLock::new(digital.to_vec())),
+            DefaultBindingType::Digital(digital) => {
+                BindingList::Digital(RwLock::new(digital.to_vec()))
+            }
             DefaultBindingType::Vector(vector) => BindingList::Vector(RwLock::new(vector.to_vec())),
         };
 
@@ -186,7 +188,7 @@ impl BindingMap {
 
                         *slot = bindings.clone();
                     }
-                    
+
                     BindingList::Digital(slot) => {
                         let BindingList::Digital(bindings) = bindings else {
                             return;
@@ -202,7 +204,7 @@ impl BindingMap {
 
                         *slot = bindings.clone();
                     }
-                    
+
                     BindingList::Vector(slot) => {
                         let BindingList::Vector(bindings) = bindings else {
                             return;

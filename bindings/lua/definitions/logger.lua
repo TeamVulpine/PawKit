@@ -4,24 +4,31 @@
 local logger = {}
 
 ---@param message string
-function logger.print_to_console(message) end
+function logger.print_to_console(message)
+end
 
 ---@param message string
-function logger.print_to_logfile(message) end
+function logger.print_to_logfile(message)
+end
 
 ---@param message string
-function logger.info(message) end
+function logger.info(message)
+end
 
 ---@param message string
-function logger.debug(message) end
+function logger.debug(message)
+end
 
 ---@param message string
-function logger.warn(message) end
+function logger.warn(message)
+end
 
 ---@param message string
-function logger.error(message) end
+function logger.error(message)
+end
 
 ---@param message string
-function logger.fatal(message) end
+function logger.fatal(message)
+end
 
 return logger

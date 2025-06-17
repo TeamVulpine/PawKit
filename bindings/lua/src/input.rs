@@ -177,34 +177,26 @@ impl LuaInputManager {
         return Ok(());
     }
 
-    fn device_connected_lua(
-        lua: &Lua,
-        this: &mut Self,
-        args: (LuaValue, usize),
-    ) -> LuaResult<usize> {
+    fn device_connected_lua(lua: &Lua, this: &Self, args: (LuaValue, usize)) -> LuaResult<usize> {
         let family = lua.from_value(args.0)?;
 
         let id = match family {
-            InputFamily::Keyboard => &mut this.manager.devices.keyboard_manager,
-            InputFamily::Mouse => &mut this.manager.devices.mouse_manager,
-            InputFamily::Gamepad => &mut this.manager.devices.gamepad_manager,
+            InputFamily::Keyboard => &this.manager.devices.keyboard_manager,
+            InputFamily::Mouse => &this.manager.devices.mouse_manager,
+            InputFamily::Gamepad => &this.manager.devices.gamepad_manager,
         }
         .device_connected(args.1);
 
         return Ok(id);
     }
 
-    fn device_disconnected_lua(
-        lua: &Lua,
-        this: &mut Self,
-        args: (LuaValue, usize),
-    ) -> LuaResult<()> {
+    fn device_disconnected_lua(lua: &Lua, this: &Self, args: (LuaValue, usize)) -> LuaResult<()> {
         let family = lua.from_value(args.0)?;
 
         match family {
-            InputFamily::Keyboard => &mut this.manager.devices.keyboard_manager,
-            InputFamily::Mouse => &mut this.manager.devices.mouse_manager,
-            InputFamily::Gamepad => &mut this.manager.devices.gamepad_manager,
+            InputFamily::Keyboard => &this.manager.devices.keyboard_manager,
+            InputFamily::Mouse => &this.manager.devices.mouse_manager,
+            InputFamily::Gamepad => &this.manager.devices.gamepad_manager,
         }
         .device_disconnected(args.1);
 
@@ -213,15 +205,15 @@ impl LuaInputManager {
 
     fn set_button_lua(
         lua: &Lua,
-        this: &mut Self,
+        this: &Self,
         args: (LuaValue, usize, LuaValue, bool),
     ) -> LuaResult<()> {
         let family = lua.from_value(args.0)?;
 
         let Some(state) = match family {
-            InputFamily::Keyboard => &mut this.manager.devices.keyboard_manager,
-            InputFamily::Mouse => &mut this.manager.devices.mouse_manager,
-            InputFamily::Gamepad => &mut this.manager.devices.gamepad_manager,
+            InputFamily::Keyboard => &this.manager.devices.keyboard_manager,
+            InputFamily::Mouse => &this.manager.devices.mouse_manager,
+            InputFamily::Gamepad => &this.manager.devices.gamepad_manager,
         }
         .get_state(args.1) else {
             return Err(LuaError::RuntimeError("Index does not exist.".into()));
@@ -240,15 +232,15 @@ impl LuaInputManager {
 
     fn set_axis_lua(
         lua: &Lua,
-        this: &mut Self,
+        this: &Self,
         args: (LuaValue, usize, LuaValue, f32),
     ) -> LuaResult<()> {
         let family = lua.from_value(args.0)?;
 
         let Some(state) = match family {
-            InputFamily::Keyboard => &mut this.manager.devices.keyboard_manager,
-            InputFamily::Mouse => &mut this.manager.devices.mouse_manager,
-            InputFamily::Gamepad => &mut this.manager.devices.gamepad_manager,
+            InputFamily::Keyboard => &this.manager.devices.keyboard_manager,
+            InputFamily::Mouse => &this.manager.devices.mouse_manager,
+            InputFamily::Gamepad => &this.manager.devices.gamepad_manager,
         }
         .get_state(args.1) else {
             return Err(LuaError::RuntimeError("Index does not exist.".into()));
@@ -268,6 +260,46 @@ impl LuaInputManager {
 
         return Ok(());
     }
+
+    fn create_handler_lua(_lua: &Lua, this: &Self, _args: ()) -> LuaResult<Option<usize>> {
+        return Ok(this.manager.create_handler());
+    }
+
+    fn destroy_handler_lua(_lua: &Lua, this: &Self, args: (usize,)) -> LuaResult<()> {
+        this.manager.destroy_handler(args.0);
+
+        return Ok(());
+    }
+
+    fn update_lua(_lua: &Lua, this: &Self, _args: ()) -> LuaResult<()> {
+        this.manager.update();
+
+        return Ok(());
+    }
+
+    fn get_frame_lua(lua: &Lua, this: &Self, args: (usize, String)) -> LuaResult<Option<LuaValue>> {
+        let Some(frame) = this.manager.get_frame(args.0, &args.1) else {
+            return Ok(None);
+        };
+        
+        return Ok(Some(lua.to_value(&frame)?));
+    }
+
+    fn connect_device_to_handler_lua(lua: &Lua, this: &Self, args: (usize, LuaValue, usize)) -> LuaResult<()> {
+        let family = lua.from_value(args.1)?;
+
+        this.manager.connect_device_to_handler(args.0, family, args.2);
+
+        return Ok(());
+    }
+
+    fn disconnect_device_from_handler_lua(lua: &Lua, this: &Self, args: (usize, LuaValue, usize)) -> LuaResult<()> {
+        let family = lua.from_value(args.1)?;
+
+        this.manager.disconnect_device_from_handler(args.0, family, args.2);
+
+        return Ok(());
+    }
 }
 
 impl LuaUserData for LuaInputManager {
@@ -280,10 +312,19 @@ impl LuaUserData for LuaInputManager {
         methods.add_method_mut("register_vector_binding", Self::register_vector_binding_lua);
         methods.add_method_mut("lock_bindings", Self::lock_bindings_lua);
 
-        methods.add_method_mut("device_connected", Self::device_connected_lua);
-        methods.add_method_mut("device_disconnected", Self::device_disconnected_lua);
+        methods.add_method("device_connected", Self::device_connected_lua);
+        methods.add_method("device_disconnected", Self::device_disconnected_lua);
 
-        methods.add_method_mut("set_button", Self::set_button_lua);
-        methods.add_method_mut("set_axis", Self::set_axis_lua);
+        methods.add_method("set_button", Self::set_button_lua);
+        methods.add_method("set_axis", Self::set_axis_lua);
+
+        methods.add_method("create_handler", Self::create_handler_lua);
+        methods.add_method("destroy_handler", Self::destroy_handler_lua);
+
+        methods.add_method("update", Self::update_lua);
+        methods.add_method("get_frame", Self::get_frame_lua);
+
+        methods.add_method("connect_device_to_handler", Self::connect_device_to_handler_lua);
+        methods.add_method("disconnect_device_from_handler", Self::disconnect_device_from_handler_lua);
     }
 }

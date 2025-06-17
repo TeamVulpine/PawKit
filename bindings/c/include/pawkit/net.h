@@ -74,11 +74,11 @@ namespace PawKit::Networking {
         NetHostPeerEvent() : OpaqueShared(nullptr, NullDeleter) {}
 
         pawkit_net_host_event_type GetType() {
-            return pawkit_net_host_event_get_type(*this);
+            return pawkit_net_host_event_get_type(Get());
         }
 
         pawkit_usize GetPeerId() {
-            return pawkit_net_host_event_get_peer_id(*this);
+            return pawkit_net_host_event_get_peer_id(Get());
         }
 
         std::span<const pawkit_u8> GetData() {
@@ -87,7 +87,7 @@ namespace PawKit::Networking {
 
             pawkit_usize size = 0;
 
-            pawkit_u8 const *data = pawkit_net_host_event_get_data(*this, &size);
+            pawkit_u8 const *data = pawkit_net_host_event_get_data(Get(), &size);
 
             if (!data)
                 return {};
@@ -106,7 +106,7 @@ namespace PawKit::Networking {
         {}
 
         inline void SendPacket(pawkit_usize peerId, pawkit_u8 *data, pawkit_usize size) {
-            pawkit_net_host_peer_send_packet(*this, peerId, data, size);
+            pawkit_net_host_peer_send_packet(Get(), peerId, data, size);
         }
 
         inline void SendPacket(pawkit_usize peerId, std::span<pawkit_u8> data) {
@@ -114,7 +114,7 @@ namespace PawKit::Networking {
         }
 
         inline bool PollEvent(NetHostPeerEvent &evt) {
-            pawkit_net_host_event rawEvt = pawkit_net_host_peer_poll_event(*this);
+            pawkit_net_host_event rawEvt = pawkit_net_host_peer_poll_event(Get());
             if (rawEvt == nullptr)
                 return false;
 
@@ -124,7 +124,7 @@ namespace PawKit::Networking {
         }
 
         inline std::string GetHostId() {
-            char const* rawId = pawkit_net_host_peer_get_host_id(*this);
+            char const* rawId = pawkit_net_host_peer_get_host_id(Get());
 
             std::string id = rawId;
 
@@ -146,7 +146,7 @@ namespace PawKit::Networking {
         NetClientPeerEvent() : OpaqueShared(nullptr, NullDeleter) {}
 
         pawkit_net_client_event_type GetType() {
-            return pawkit_net_client_event_get_type(*this);
+            return pawkit_net_client_event_get_type(Get());
         }
 
         std::span<const pawkit_u8> GetData() {
@@ -154,7 +154,7 @@ namespace PawKit::Networking {
                 return {};
 
             pawkit_usize size = 0;
-            pawkit_u8 const *data = pawkit_net_client_event_get_data(*this, &size);
+            pawkit_u8 const *data = pawkit_net_client_event_get_data(Get(), &size);
             if (!data)
                 return {};
 
@@ -171,7 +171,7 @@ namespace PawKit::Networking {
         {}
 
         inline void SendPacket(pawkit_u8 *data, pawkit_usize size) {
-            pawkit_net_client_peer_send_packet(*this, data, size);
+            pawkit_net_client_peer_send_packet(Get(), data, size);
         }
 
         inline void SendPacket(std::span<pawkit_u8> data) {
@@ -179,7 +179,7 @@ namespace PawKit::Networking {
         }
 
         inline bool PollEvent(NetClientPeerEvent& evt) {
-            pawkit_net_client_event rawEvt = pawkit_net_client_peer_poll_event(*this);
+            pawkit_net_client_event rawEvt = pawkit_net_client_peer_poll_event(Get());
             if (rawEvt == nullptr)
                 return false;
 

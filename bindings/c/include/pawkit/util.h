@@ -56,6 +56,14 @@ namespace PawKit {
         inline operator Ptr () const {
             return ptr;
         }
+
+        inline Ptr Get() {
+            return ptr;
+        }
+
+        inline Ptr Get() const {
+            return ptr;
+        }
     };
 
     template <std::same_as<void *> T>
@@ -72,6 +80,14 @@ namespace PawKit {
         }
 
         inline operator Ptr () const {
+            return ptr.get();
+        }
+
+        inline Ptr Get() {
+            return ptr.get();
+        }
+
+        inline Ptr Get() const {
             return ptr.get();
         }
     };
