@@ -281,22 +281,32 @@ impl LuaInputManager {
         let Some(frame) = this.manager.get_frame(args.0, &args.1) else {
             return Ok(None);
         };
-        
+
         return Ok(Some(lua.to_value(&frame)?));
     }
 
-    fn connect_device_to_handler_lua(lua: &Lua, this: &Self, args: (usize, LuaValue, usize)) -> LuaResult<()> {
+    fn connect_device_to_handler_lua(
+        lua: &Lua,
+        this: &Self,
+        args: (usize, LuaValue, usize),
+    ) -> LuaResult<()> {
         let family = lua.from_value(args.1)?;
 
-        this.manager.connect_device_to_handler(args.0, family, args.2);
+        this.manager
+            .connect_device_to_handler(args.0, family, args.2);
 
         return Ok(());
     }
 
-    fn disconnect_device_from_handler_lua(lua: &Lua, this: &Self, args: (usize, LuaValue, usize)) -> LuaResult<()> {
+    fn disconnect_device_from_handler_lua(
+        lua: &Lua,
+        this: &Self,
+        args: (usize, LuaValue, usize),
+    ) -> LuaResult<()> {
         let family = lua.from_value(args.1)?;
 
-        this.manager.disconnect_device_from_handler(args.0, family, args.2);
+        this.manager
+            .disconnect_device_from_handler(args.0, family, args.2);
 
         return Ok(());
     }
@@ -324,7 +334,13 @@ impl LuaUserData for LuaInputManager {
         methods.add_method("update", Self::update_lua);
         methods.add_method("get_frame", Self::get_frame_lua);
 
-        methods.add_method("connect_device_to_handler", Self::connect_device_to_handler_lua);
-        methods.add_method("disconnect_device_from_handler", Self::disconnect_device_from_handler_lua);
+        methods.add_method(
+            "connect_device_to_handler",
+            Self::connect_device_to_handler_lua,
+        );
+        methods.add_method(
+            "disconnect_device_from_handler",
+            Self::disconnect_device_from_handler_lua,
+        );
     }
 }
