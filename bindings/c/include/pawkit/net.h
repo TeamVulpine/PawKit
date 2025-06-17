@@ -71,7 +71,7 @@ namespace PawKit::Networking {
         NetHostPeerEvent(pawkit_net_host_event evt) : OpaqueShared(evt, pawkit_net_host_event_free) {}
 
         public:
-        NetHostPeerEvent() : OpaqueShared(nullptr, NullDeleter<Ptr>) {}
+        NetHostPeerEvent() : OpaqueShared(nullptr, NullDeleter) {}
 
         pawkit_net_host_event_type GetType() {
             return pawkit_net_host_event_get_type(*this);
@@ -99,14 +99,17 @@ namespace PawKit::Networking {
     struct NetHostPeer : OpaqueShared<pawkit_net_host_peer> {
         public:
         inline NetHostPeer(std::string &&serverUrl, pawkit_u32 gameId, bool requestProxy) :
-            OpaqueShared(pawkit_net_host_peer_create(serverUrl.data(), gameId, requestProxy), pawkit_net_host_peer_destroy)
+            OpaqueShared(
+                pawkit_net_host_peer_create(serverUrl.data(), gameId, requestProxy),
+                pawkit_net_host_peer_destroy
+            )
         {}
 
         inline void SendPacket(pawkit_usize peerId, pawkit_u8 *data, pawkit_usize size) {
             pawkit_net_host_peer_send_packet(*this, peerId, data, size);
         }
 
-        inline void SendPacket(pawkit_usize peerId, std::span<pawkit_u8> &&data) {
+        inline void SendPacket(pawkit_usize peerId, std::span<pawkit_u8> data) {
             SendPacket(peerId, data.data(), data.size());
         }
 
@@ -135,10 +138,12 @@ namespace PawKit::Networking {
         friend struct NetClientPeer;
 
         private:
-        NetClientPeerEvent(pawkit_net_client_event evt) : OpaqueShared(evt, pawkit_net_client_event_free) {}
+        NetClientPeerEvent(pawkit_net_client_event evt) :
+            OpaqueShared(evt, pawkit_net_client_event_free)
+        {}
 
         public:
-        NetClientPeerEvent() : OpaqueShared(nullptr, NullDeleter<Ptr>) {}
+        NetClientPeerEvent() : OpaqueShared(nullptr, NullDeleter) {}
 
         pawkit_net_client_event_type GetType() {
             return pawkit_net_client_event_get_type(*this);
@@ -159,14 +164,17 @@ namespace PawKit::Networking {
 
     struct NetClientPeer : OpaqueShared<pawkit_net_client_peer> {
         inline NetClientPeer(std::string &&hostId, pawkit_u32 gameId) :
-            OpaqueShared(pawkit_net_client_peer_create(hostId.data(), gameId), pawkit_net_client_peer_destroy)
+            OpaqueShared(
+                pawkit_net_client_peer_create(hostId.data(), gameId),
+                pawkit_net_client_peer_destroy
+            )
         {}
 
         inline void SendPacket(pawkit_u8 *data, pawkit_usize size) {
             pawkit_net_client_peer_send_packet(*this, data, size);
         }
 
-        inline void SendPacket(std::span<pawkit_u8> &&data) {
+        inline void SendPacket(std::span<pawkit_u8> data) {
             SendPacket(data.data(), data.size());
         }
 

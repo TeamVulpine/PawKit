@@ -399,4 +399,16 @@ function InputManager:device_connected(family, id) end
 ---@return nil
 function InputManager:device_disconnected(family, id) end
 
+---@param family InputFamily
+---@param device DeviceId
+---@param button KeyboardButton | MouseButton | GamepadButton
+---@param value boolean
+function InputManager:set_button(family, device, button, value) end
+
+---@param family InputFamily
+---@param device DeviceId
+---@param button MouseAxis | GamepadAxis
+---@param value number
+function InputManager:set_axis(family, device, button, value) end
+
 return input

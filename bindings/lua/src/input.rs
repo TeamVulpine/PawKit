@@ -1,5 +1,12 @@
 use mlua::prelude::*;
-use pawkit_input::{manager::InputFamily, InputManager};
+use pawkit_input::{
+    bindings::{
+        axis::{GamepadAxis, MouseAxis},
+        button::{GamepadButton, KeyboardButton, MouseButton},
+    },
+    manager::InputFamily,
+    InputManager,
+};
 
 use crate::lua_enum;
 
@@ -170,26 +177,94 @@ impl LuaInputManager {
         return Ok(());
     }
 
-    fn device_connected_lua(lua: &Lua, this: &mut Self, args: (LuaValue, usize)) -> LuaResult<usize> {
+    fn device_connected_lua(
+        lua: &Lua,
+        this: &mut Self,
+        args: (LuaValue, usize),
+    ) -> LuaResult<usize> {
         let family = lua.from_value(args.0)?;
 
         let id = match family {
-            InputFamily::Keyboard => &mut this.manager.keyboard_manager,
-            InputFamily::Mouse => &mut this.manager.mouse_manager,
-            InputFamily::Gamepad => &mut this.manager.gamepad_manager,
-        }.device_connected(args.1);
+            InputFamily::Keyboard => &mut this.manager.devices.keyboard_manager,
+            InputFamily::Mouse => &mut this.manager.devices.mouse_manager,
+            InputFamily::Gamepad => &mut this.manager.devices.gamepad_manager,
+        }
+        .device_connected(args.1);
 
         return Ok(id);
     }
 
-    fn device_disconnected_lua(lua: &Lua, this: &mut Self, args: (LuaValue, usize)) -> LuaResult<()> {
+    fn device_disconnected_lua(
+        lua: &Lua,
+        this: &mut Self,
+        args: (LuaValue, usize),
+    ) -> LuaResult<()> {
         let family = lua.from_value(args.0)?;
 
         match family {
-            InputFamily::Keyboard => &mut this.manager.keyboard_manager,
-            InputFamily::Mouse => &mut this.manager.mouse_manager,
-            InputFamily::Gamepad => &mut this.manager.gamepad_manager,
-        }.device_disconnected(args.1);
+            InputFamily::Keyboard => &mut this.manager.devices.keyboard_manager,
+            InputFamily::Mouse => &mut this.manager.devices.mouse_manager,
+            InputFamily::Gamepad => &mut this.manager.devices.gamepad_manager,
+        }
+        .device_disconnected(args.1);
+
+        return Ok(());
+    }
+
+    fn set_button_lua(
+        lua: &Lua,
+        this: &mut Self,
+        args: (LuaValue, usize, LuaValue, bool),
+    ) -> LuaResult<()> {
+        let family = lua.from_value(args.0)?;
+
+        let Some(state) = match family {
+            InputFamily::Keyboard => &mut this.manager.devices.keyboard_manager,
+            InputFamily::Mouse => &mut this.manager.devices.mouse_manager,
+            InputFamily::Gamepad => &mut this.manager.devices.gamepad_manager,
+        }
+        .get_state_mut(args.1) else {
+            return Err(LuaError::RuntimeError("Index does not exist.".into()));
+        };
+
+        let index = match family {
+            InputFamily::Keyboard => lua.from_value::<KeyboardButton>(args.2)? as usize,
+            InputFamily::Mouse => lua.from_value::<MouseButton>(args.2)? as usize,
+            InputFamily::Gamepad => lua.from_value::<GamepadButton>(args.2)? as usize,
+        };
+
+        state.set_digital(index, args.3);
+
+        return Ok(());
+    }
+
+    fn set_axis_lua(
+        lua: &Lua,
+        this: &mut Self,
+        args: (LuaValue, usize, LuaValue, f32),
+    ) -> LuaResult<()> {
+        let family = lua.from_value(args.0)?;
+
+        let Some(state) = match family {
+            InputFamily::Keyboard => &mut this.manager.devices.keyboard_manager,
+            InputFamily::Mouse => &mut this.manager.devices.mouse_manager,
+            InputFamily::Gamepad => &mut this.manager.devices.gamepad_manager,
+        }
+        .get_state_mut(args.1) else {
+            return Err(LuaError::RuntimeError("Index does not exist.".into()));
+        };
+
+        let index = match family {
+            InputFamily::Keyboard => {
+                return Err(LuaError::RuntimeError(
+                    "Keyboard does not have any axes".into(),
+                ))
+            }
+            InputFamily::Mouse => lua.from_value::<MouseAxis>(args.2)? as usize,
+            InputFamily::Gamepad => lua.from_value::<GamepadAxis>(args.2)? as usize,
+        };
+
+        state.set_analog(index, args.3);
 
         return Ok(());
     }
@@ -204,7 +279,11 @@ impl LuaUserData for LuaInputManager {
         methods.add_method_mut("register_analog_binding", Self::register_analog_binding_lua);
         methods.add_method_mut("register_vector_binding", Self::register_vector_binding_lua);
         methods.add_method_mut("lock_bindings", Self::lock_bindings_lua);
+
         methods.add_method_mut("device_connected", Self::device_connected_lua);
         methods.add_method_mut("device_disconnected", Self::device_disconnected_lua);
+
+        methods.add_method_mut("set_button", Self::set_button_lua);
+        methods.add_method_mut("set_axis", Self::set_axis_lua);
     }
 }

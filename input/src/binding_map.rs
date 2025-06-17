@@ -1,5 +1,11 @@
-use std::{collections::HashMap, error::Error, fmt};
+use std::{
+    collections::HashMap,
+    error::Error,
+    fmt,
+    sync::{Arc, RwLock},
+};
 
+use pawkit_holy_array::HolyArray;
 use serde::{Deserialize, Serialize};
 
 use crate::bindings::{
@@ -12,6 +18,7 @@ pub enum BindingMapError {
     KeyAlreadyExists,
     BindingUpdateWhileLocked,
     InstantiationWhileUnlocked,
+    LockIssue,
 }
 
 impl fmt::Display for BindingMapError {
@@ -22,12 +29,22 @@ impl fmt::Display for BindingMapError {
 
 impl Error for BindingMapError {}
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type", content = "bindings")]
 pub enum BindingList {
-    Digital(Vec<DigitalBinding>),
-    Analog(Vec<AnalogBinding>),
-    Vector(Vec<VectorBinding>),
+    Digital(RwLock<Vec<DigitalBinding>>),
+    Analog(RwLock<Vec<AnalogBinding>>),
+    Vector(RwLock<Vec<VectorBinding>>),
+}
+
+impl Clone for BindingList {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Digital(bindings) => Self::Digital(RwLock::new(bindings.read().unwrap().clone())),
+            Self::Analog(bindings) => Self::Analog(RwLock::new(bindings.read().unwrap().clone())),
+            Self::Vector(bindings) => Self::Vector(RwLock::new(bindings.read().unwrap().clone())),
+        }
+    }
 }
 
 pub struct DefaultBindingMap {
@@ -41,6 +58,8 @@ pub struct DefaultBindingMap {
     ///
     /// Once it's locked, it cannot be unlocked.
     pub(crate) locked: bool,
+
+    pub(crate) instances: RwLock<HolyArray<Arc<BindingMap>>>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -55,6 +74,7 @@ impl DefaultBindingMap {
             index: HashMap::new(),
             values: Vec::new(),
             locked: false,
+            instances: RwLock::new(HolyArray::new()),
         };
     }
 
@@ -62,15 +82,26 @@ impl DefaultBindingMap {
         self.locked = true;
     }
 
-    pub fn new_instance<'a>(&'a self) -> Result<BindingMap<'a>, BindingMapError> {
+    pub fn new_instance(&self) -> Result<usize, BindingMapError> {
         if !self.locked {
             return Err(BindingMapError::InstantiationWhileUnlocked);
         }
 
-        return Ok(BindingMap {
-            default: self,
+        let Ok(mut instances) = self.instances.write() else {
+            return Err(BindingMapError::LockIssue);
+        };
+
+        let index = instances.acquire(Arc::new(BindingMap {
             values: self.values.clone().into_boxed_slice(),
-        });
+        }));
+
+        return Ok(index);
+    }
+
+    pub fn get_map(&self, index: usize) -> Option<Arc<BindingMap>> {
+        let instances = self.instances.read().ok()?;
+
+        return Some(instances.get(index)?.clone());
     }
 
     pub fn register_raw<'a>(
@@ -87,9 +118,9 @@ impl DefaultBindingMap {
         }
 
         let binding_list = match bindings {
-            DefaultBindingType::Analog(analog) => BindingList::Analog(analog.to_vec()),
-            DefaultBindingType::Digital(digital) => BindingList::Digital(digital.to_vec()),
-            DefaultBindingType::Vector(vector) => BindingList::Vector(vector.to_vec()),
+            DefaultBindingType::Analog(analog) => BindingList::Analog(RwLock::new(analog.to_vec())),
+            DefaultBindingType::Digital(digital) => BindingList::Digital(RwLock::new(digital.to_vec())),
+            DefaultBindingType::Vector(vector) => BindingList::Vector(RwLock::new(vector.to_vec())),
         };
 
         let index = self.values.len();
@@ -130,27 +161,74 @@ impl DefaultBindingMap {
     }
 }
 
-pub struct BindingMap<'a> {
-    pub(crate) default: &'a DefaultBindingMap,
+pub struct BindingMap {
     /// Using a boxed slice, since the size will never change.
     pub(crate) values: Box<[BindingList]>,
 }
 
-impl<'a> BindingMap<'a> {
-    pub fn deserialize(&mut self, serial: BindingMapSerializer) {
+impl BindingMap {
+    pub fn deserialize(&mut self, index: &HashMap<String, usize>, serial: BindingMapSerializer) {
         for (name, bindings) in serial.values {
-            if let Some(slot) = self.get_binding_mut(&name) {
-                *slot = bindings;
+            if let Some(slot) = self.get_binding(index, &name) {
+                match slot {
+                    BindingList::Analog(slot) => {
+                        let BindingList::Analog(bindings) = bindings else {
+                            return;
+                        };
+
+                        let Ok(mut slot) = slot.write() else {
+                            return;
+                        };
+
+                        let Ok(bindings) = bindings.read() else {
+                            return;
+                        };
+
+                        *slot = bindings.clone();
+                    }
+                    
+                    BindingList::Digital(slot) => {
+                        let BindingList::Digital(bindings) = bindings else {
+                            return;
+                        };
+
+                        let Ok(mut slot) = slot.write() else {
+                            return;
+                        };
+
+                        let Ok(bindings) = bindings.read() else {
+                            return;
+                        };
+
+                        *slot = bindings.clone();
+                    }
+                    
+                    BindingList::Vector(slot) => {
+                        let BindingList::Vector(bindings) = bindings else {
+                            return;
+                        };
+
+                        let Ok(mut slot) = slot.write() else {
+                            return;
+                        };
+
+                        let Ok(bindings) = bindings.read() else {
+                            return;
+                        };
+
+                        *slot = bindings.clone();
+                    }
+                }
             }
         }
     }
 
-    pub fn serialize(&self) -> BindingMapSerializer {
+    pub fn serialize(&self, index: &HashMap<String, usize>) -> BindingMapSerializer {
         let mut serial = BindingMapSerializer {
             values: HashMap::new(),
         };
 
-        for (name, index) in &self.default.index {
+        for (name, index) in index {
             serial
                 .values
                 .insert(name.clone(), self.values[*index].clone());
@@ -159,15 +237,9 @@ impl<'a> BindingMap<'a> {
         return serial;
     }
 
-    pub fn get_binding(&self, name: &str) -> Option<&BindingList> {
-        let index = *self.default.index.get(name)?;
+    pub fn get_binding(&self, index: &HashMap<String, usize>, name: &str) -> Option<&BindingList> {
+        let index = *index.get(name)?;
 
         return Some(&self.values[index]);
-    }
-
-    pub fn get_binding_mut(&mut self, name: &str) -> Option<&mut BindingList> {
-        let index = *self.default.index.get(name)?;
-
-        return Some(&mut self.values[index]);
     }
 }

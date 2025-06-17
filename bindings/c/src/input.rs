@@ -401,9 +401,9 @@ unsafe extern "C" fn pawkit_input_manager_device_connected(
     };
 
     match family {
-        INPUT_FAMILY_KEY => manager.keyboard_manager.device_connected(id),
-        INPUT_FAMILY_MOUSE => manager.mouse_manager.device_connected(id),
-        INPUT_FAMILY_JOY => manager.gamepad_manager.device_connected(id),
+        INPUT_FAMILY_KEY => manager.devices.keyboard_manager.device_connected(id),
+        INPUT_FAMILY_MOUSE => manager.devices.mouse_manager.device_connected(id),
+        INPUT_FAMILY_JOY => manager.devices.gamepad_manager.device_connected(id),
         _ => 0,
     };
 }
@@ -419,9 +419,9 @@ unsafe extern "C" fn pawkit_input_manager_device_disconnected(
     };
 
     match family {
-        INPUT_FAMILY_KEY => manager.keyboard_manager.device_disconnected_raw(id),
-        INPUT_FAMILY_MOUSE => manager.mouse_manager.device_disconnected_raw(id),
-        INPUT_FAMILY_JOY => manager.gamepad_manager.device_disconnected_raw(id),
+        INPUT_FAMILY_KEY => manager.devices.keyboard_manager.device_disconnected_raw(id),
+        INPUT_FAMILY_MOUSE => manager.devices.mouse_manager.device_disconnected_raw(id),
+        INPUT_FAMILY_JOY => manager.devices.gamepad_manager.device_disconnected_raw(id),
         _ => {}
     };
 }
@@ -439,9 +439,9 @@ unsafe extern "C" fn pawkit_input_manager_get_state(
     };
 
     return match family {
-        INPUT_FAMILY_KEY => manager.keyboard_manager.get_state_raw_mut(id),
-        INPUT_FAMILY_MOUSE => manager.mouse_manager.get_state_raw_mut(id),
-        INPUT_FAMILY_JOY => manager.gamepad_manager.get_state_raw_mut(id),
+        INPUT_FAMILY_KEY => manager.devices.keyboard_manager.get_state_raw_mut(id),
+        INPUT_FAMILY_MOUSE => manager.devices.mouse_manager.get_state_raw_mut(id),
+        INPUT_FAMILY_JOY => manager.devices.gamepad_manager.get_state_raw_mut(id),
         _ => None,
     }
     .map(|it| it as CInputDeviceState)
@@ -474,94 +474,92 @@ unsafe extern "C" fn pawkit_input_state_set_axis(
     state.set_analog(axis as usize, value);
 }
 
-/// Feeling :uh: about that `'static`
-/// But there's no better way to do this.
-type CInputHandler = *mut InputHandler<'static>;
+type CInputHandler = *mut InputHandler;
 
 #[no_mangle]
-unsafe extern "C" fn pawkit_input_manager_create_handler(manager: CInputManager) -> CInputHandler {
+unsafe extern "C" fn pawkit_input_manager_create_handler(
+    manager: CInputManager,
+    in_handler: &mut usize,
+) -> bool {
     let Some(manager) = ptr_to_ref(manager) else {
-        return null_mut();
+        return false;
     };
 
     let Some(handler) = manager.create_handler() else {
-        return null_mut();
-    };
-
-    return move_to_heap(handler);
-}
-
-#[no_mangle]
-unsafe extern "C" fn pawkit_input_handler_destroy(handler: CInputHandler) {
-    drop_from_heap(handler);
-}
-
-#[no_mangle]
-unsafe extern "C" fn pawkit_input_handler_update(handler: CInputHandler) {
-    let Some(handler) = ptr_to_ref_mut(handler) else {
-        return;
-    };
-
-    handler.update();
-}
-
-#[no_mangle]
-unsafe extern "C" fn pawkit_input_handler_get_frame(
-    handler: CInputHandler,
-    name: *const c_char,
-    frame: *mut InputFrame,
-) -> bool {
-    let Some(handler) = ptr_to_ref_mut(handler) else {
         return false;
     };
 
-    let Some(frame) = ptr_to_ref_mut(frame) else {
-        return false;
-    };
-
-    let Some(name) = cstr_to_str(name) else {
-        return false;
-    };
-
-    let Some(new_frame) = handler.get_frame(name) else {
-        return false;
-    };
-
-    *frame = new_frame;
+    *in_handler = handler;
 
     return true;
 }
 
-#[no_mangle]
-unsafe extern "C" fn pawkit_input_handler_connect_device(
-    handler: CInputHandler,
-    family: CInputFamily,
-    id: usize,
-) {
-    let Some(handler) = ptr_to_ref_mut(handler) else {
-        return;
-    };
+// #[no_mangle]
+// unsafe extern "C" fn pawkit_input_handler_update(handler: CInputHandler) {
+//     let Some(handler) = ptr_to_ref_mut(handler) else {
+//         return;
+//     };
 
-    let Ok(family) = InputFamily::try_from_primitive(family) else {
-        return;
-    };
+//     handler.update();
+// }
 
-    handler.connect_device_raw(family, id);
-}
+// #[no_mangle]
+// unsafe extern "C" fn pawkit_input_handler_get_frame(
+//     handler: CInputHandler,
+//     name: *const c_char,
+//     frame: *mut InputFrame,
+// ) -> bool {
+//     let Some(handler) = ptr_to_ref_mut(handler) else {
+//         return false;
+//     };
 
-#[no_mangle]
-unsafe extern "C" fn pawkit_input_handler_disconnect_device(
-    handler: CInputHandler,
-    family: CInputFamily,
-    id: usize,
-) {
-    let Some(handler) = ptr_to_ref_mut(handler) else {
-        return;
-    };
+//     let Some(frame) = ptr_to_ref_mut(frame) else {
+//         return false;
+//     };
 
-    let Ok(family) = InputFamily::try_from_primitive(family) else {
-        return;
-    };
+//     let Some(name) = cstr_to_str(name) else {
+//         return false;
+//     };
 
-    handler.disconnect_device_raw(family, id);
-}
+//     let Some(new_frame) = handler.get_frame(name) else {
+//         return false;
+//     };
+
+//     *frame = new_frame;
+
+//     return true;
+// }
+
+// #[no_mangle]
+// unsafe extern "C" fn pawkit_input_handler_connect_device(
+//     handler: CInputHandler,
+//     family: CInputFamily,
+//     id: usize,
+// ) {
+//     let Some(handler) = ptr_to_ref_mut(handler) else {
+//         return;
+//     };
+
+//     let Ok(family) = InputFamily::try_from_primitive(family) else {
+//         return;
+//     };
+
+//     handler.connect_device_raw(family, id);
+// }
+
+// #[no_mangle]
+// unsafe extern "C" fn pawkit_input_handler_disconnect_device(
+//     handler: CInputHandler,
+//     family: CInputFamily,
+//     id: usize,
+// ) {
+//     let Some(handler) = ptr_to_ref_mut(handler) else {
+//         return;
+//     };
+
+//     let Ok(family) = InputFamily::try_from_primitive(family) else {
+//         return;
+//     };
+
+//     handler.disconnect_device_raw(family, id);
+// }

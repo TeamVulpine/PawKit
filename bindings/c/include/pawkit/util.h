@@ -36,8 +36,7 @@ typedef double pawkit_f64;
 #include <functional>
 
 namespace PawKit {
-    template <std::same_as<void *> T>
-    inline void NullDeleter(T ptr) {}
+    constexpr inline void NullDeleter(void *ptr) {}
 
     template <std::same_as<void *> T>
     struct OpaqueHolder {
@@ -48,6 +47,7 @@ namespace PawKit {
 
         public:
         inline OpaqueHolder(Ptr ptr) : ptr(ptr) {}
+        virtual ~OpaqueHolder() = default;
 
         inline operator Ptr () {
             return ptr;
@@ -57,19 +57,22 @@ namespace PawKit {
             return ptr;
         }
     };
-    
+
     template <std::same_as<void *> T>
-    struct OpaqueShared : std::shared_ptr<void> {
+    struct OpaqueShared {
         using Ptr = T;
 
-        inline OpaqueShared(Ptr ptr, std::function<void (Ptr)> destruct) : shared_ptr(ptr, destruct) {}
+        std::shared_ptr<void> ptr;
+
+        inline OpaqueShared(Ptr ptr, std::function<void (Ptr)> destruct) : ptr(ptr, destruct) {}
+        virtual ~OpaqueShared() = default;
 
         inline operator Ptr () {
-            return get();
+            return ptr.get();
         }
 
         inline operator Ptr () const {
-            return get();
+            return ptr.get();
         }
     };
 }

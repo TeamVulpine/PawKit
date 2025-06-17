@@ -220,10 +220,7 @@ void pawkit_input_state_set_axis(pawkit_input_state_t state, pawkit_input_axis_t
 
 typedef void *pawkit_input_handler_t;
 
-pawkit_input_handler_t pawkit_input_manager_create_handler(pawkit_input_manager_t manager);
-void pawkit_input_handler_destroy(pawkit_input_handler_t handler);
-
-void pawkit_input_handler_update(pawkit_input_handler_t handler);
+pawkit_usize pawkit_input_manager_create_handler(pawkit_input_manager_t manager);
 
 enum {
     PAWKIT_INPUT_FRAME_TYPE_DIGITAL,
@@ -255,11 +252,6 @@ typedef struct pawkit_input_frame_t {
     };
 } pawkit_input_frame_t;
 
-bool pawkit_input_handler_get_frame(pawkit_input_handler_t handler, char const *binding, pawkit_input_frame_t *frame);
-
-void pawkit_input_handler_connect_device(pawkit_input_handler_t handler, pawkit_input_family_t family, pawkit_usize id);
-void pawkit_input_handler_disconnect_device(pawkit_input_handler_t handler, pawkit_input_family_t family, pawkit_usize id);
-
 #ifdef __cplusplus
 }
 
@@ -290,35 +282,12 @@ namespace PawKit::Input {
         }
     };
 
-    struct Handler : OpaqueShared<pawkit_input_handler_t> {
-        friend struct Manager;
-
-        private:
-        inline Handler(Ptr handler) : OpaqueShared(handler, pawkit_input_handler_destroy) {}
-
-        public:
-        void Update() {
-            pawkit_input_handler_update(*this);
-        }
-
-        bool GetFrame(std::string &&binding, Frame &frame) {
-            return pawkit_input_handler_get_frame(*this, binding.c_str(), &frame);
-        }
-
-        void ConnectDevice(Family family, pawkit_usize id) {
-            pawkit_input_handler_connect_device(*this, family, id);
-        }
-
-        void DisconnectDevice(Family family, pawkit_usize id) {
-            pawkit_input_handler_disconnect_device(*this, family, id);
-        }
-    };
-
     struct Manager : OpaqueShared<pawkit_input_handler_t>  {
-        inline Manager() : OpaqueShared(pawkit_input_manager_create(), pawkit_input_manager_destroy) {}
+        inline Manager() :
+            OpaqueShared(pawkit_input_manager_create(), pawkit_input_manager_destroy)
+        {}
 
-        public:
-        inline bool RegisterBinding(std::string &&name, BindingType type, std::span<Binding> bindings) {
+        inline bool RegisterBinding(std::string const &name, BindingType type, std::span<Binding> bindings) {
             return pawkit_input_manager_register_binding(*this, name.c_str(), type, bindings.data(), bindings.size());
         }
 
@@ -338,8 +307,8 @@ namespace PawKit::Input {
             return State(pawkit_input_manager_get_state(*this, family, id));
         }
 
-        inline Handler CreateHandler() {
-            return Handler(pawkit_input_manager_create_handler(*this));
+        inline pawkit_usize CreateHandler() {
+            return pawkit_input_manager_create_handler(*this);
         }
     };
 }
