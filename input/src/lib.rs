@@ -88,9 +88,9 @@ impl InputManager {
         };
 
         return Some(handlers.acquire(InputHandler {
-            connected_keyboards: Vec::new(),
-            connected_mice: Vec::new(),
-            connected_gamepads: Vec::new(),
+            connected_keyboards: RwLock::new(Vec::new()),
+            connected_mice: RwLock::new(Vec::new()),
+            connected_gamepads: RwLock::new(Vec::new()),
             frames: frames.into_boxed_slice(),
         }));
     }
@@ -158,9 +158,9 @@ pub enum InputFrame {
 ///
 /// It manages its own bindings and keeps track of the devices it's using.
 pub struct InputHandler {
-    connected_keyboards: Vec<usize>,
-    connected_mice: Vec<usize>,
-    connected_gamepads: Vec<usize>,
+    connected_keyboards: RwLock<Vec<usize>>,
+    connected_mice: RwLock<Vec<usize>>,
+    connected_gamepads: RwLock<Vec<usize>>,
     frames: Box<[RwLock<InputFrame>]>,
 }
 
@@ -295,19 +295,34 @@ impl InputHandler {
     }
 
     fn get_binding_digital(&self, managers: &InputDeviceManagers, button: &DigitalBinding) -> bool {
+
         return match button {
             DigitalBinding::Gamepad(gamepad) => {
-                Self::get_bound_button(&managers.gamepad_manager, gamepad, &self.connected_gamepads)
+                let Ok(devices) = self.connected_gamepads.read() else {
+                    return false;
+                };
+
+                Self::get_bound_button(&managers.gamepad_manager, gamepad, &devices)
             }
 
-            DigitalBinding::Keyboard(keyboard) => Self::get_bound_button(
-                &managers.keyboard_manager,
-                keyboard,
-                &self.connected_keyboards,
-            ),
+            DigitalBinding::Keyboard(keyboard) => {
+                let Ok(devices) = self.connected_keyboards.read() else {
+                    return false;
+                };
+
+                Self::get_bound_button(
+                    &managers.keyboard_manager,
+                    keyboard,
+                    &devices,
+                )
+            },
 
             DigitalBinding::Mouse(mouse) => {
-                Self::get_bound_button(&managers.mouse_manager, mouse, &self.connected_mice)
+                let Ok(devices) = self.connected_mice.read() else {
+                    return false;
+                };
+                
+                Self::get_bound_button(&managers.mouse_manager, mouse, &devices)
             }
         };
     }
@@ -315,17 +330,31 @@ impl InputHandler {
     fn get_binding_analog(&self, managers: &InputDeviceManagers, axis: &AnalogBinding) -> f32 {
         return match &axis.axis {
             AnalogBindingKind::Gamepad(gamepad) => {
-                Self::get_bound_axis(&managers.gamepad_manager, gamepad, &self.connected_gamepads)
+                let Ok(devices) = self.connected_gamepads.read() else {
+                    return 0f32;
+                };
+
+                Self::get_bound_axis(&managers.gamepad_manager, gamepad, &devices)
             }
 
-            AnalogBindingKind::Keyboard(keyboard) => Self::get_bound_axis(
-                &managers.keyboard_manager,
-                keyboard,
-                &self.connected_keyboards,
-            ),
+            AnalogBindingKind::Keyboard(keyboard) => {
+                let Ok(devices) = self.connected_keyboards.read() else {
+                    return 0f32;
+                };
+
+                Self::get_bound_axis(
+                    &managers.keyboard_manager,
+                    keyboard,
+                    &devices,
+                )
+            },
 
             AnalogBindingKind::Mouse(mouse) => {
-                Self::get_bound_axis(&managers.mouse_manager, mouse, &self.connected_mice)
+                let Ok(devices) = self.connected_mice.read() else {
+                    return 0f32;
+                };
+                
+                Self::get_bound_axis(&managers.mouse_manager, mouse, &devices)
             }
         };
     }
@@ -336,20 +365,38 @@ impl InputHandler {
         vec: &VectorBinding,
     ) -> (f32, f32) {
         return match &vec.axes {
-            VectorBindingKind::Gamepad { x, y } => (
-                Self::get_bound_axis(&managers.gamepad_manager, x, &self.connected_gamepads),
-                Self::get_bound_axis(&managers.gamepad_manager, y, &self.connected_gamepads),
-            ),
+            VectorBindingKind::Gamepad { x, y } => {
+                let Ok(devices) = self.connected_gamepads.read() else {
+                    return (0f32, 0f32);
+                };
 
-            VectorBindingKind::Keyboard { x, y } => (
-                Self::get_bound_axis(&managers.keyboard_manager, x, &self.connected_keyboards),
-                Self::get_bound_axis(&managers.keyboard_manager, y, &self.connected_keyboards),
-            ),
+                (
+                    Self::get_bound_axis(&managers.gamepad_manager, x, &devices),
+                    Self::get_bound_axis(&managers.gamepad_manager, y, &devices),
+                )
+            },
 
-            VectorBindingKind::Mouse { x, y } => (
-                Self::get_bound_axis(&managers.mouse_manager, x, &self.connected_mice),
-                Self::get_bound_axis(&managers.mouse_manager, y, &self.connected_mice),
-            ),
+            VectorBindingKind::Keyboard { x, y } => {
+                let Ok(devices) = self.connected_keyboards.read() else {
+                    return (0f32, 0f32);
+                };
+
+                (
+                    Self::get_bound_axis(&managers.keyboard_manager, x, &devices),
+                    Self::get_bound_axis(&managers.keyboard_manager, y, &devices),
+                )
+            },
+
+            VectorBindingKind::Mouse { x, y } => {
+                let Ok(devices) = self.connected_mice.read() else {
+                    return (0f32, 0f32);
+                };
+                
+                (
+                    Self::get_bound_axis(&managers.mouse_manager, x, &devices),
+                    Self::get_bound_axis(&managers.mouse_manager, y, &devices),
+                )
+            },
         };
     }
 
@@ -468,13 +515,16 @@ impl InputHandler {
         return Some(self.frames[*index].read().ok()?.clone());
     }
 
-    pub fn connect_device(&mut self, family: InputFamily, id: usize) {
-        match family {
-            InputFamily::Gamepad => &mut self.connected_gamepads,
-            InputFamily::Keyboard => &mut self.connected_keyboards,
-            InputFamily::Mouse => &mut self.connected_mice,
-        }
-        .push(id);
+    pub fn connect_device(&self, family: InputFamily, id: usize) {
+        let Ok(mut devices) = match family {
+            InputFamily::Gamepad => &self.connected_gamepads,
+            InputFamily::Keyboard => &self.connected_keyboards,
+            InputFamily::Mouse => &self.connected_mice,
+        }.write() else {
+            return;
+        };
+
+        devices.push(id);
     }
 
     pub fn connect_device_raw(
@@ -496,13 +546,15 @@ impl InputHandler {
     }
 
     pub fn disconnect_device(&mut self, family: InputFamily, id: usize) {
-        let vec = match family {
-            InputFamily::Gamepad => &mut self.connected_gamepads,
-            InputFamily::Keyboard => &mut self.connected_keyboards,
-            InputFamily::Mouse => &mut self.connected_mice,
+        let Ok(mut devices) = match family {
+            InputFamily::Gamepad => &self.connected_gamepads,
+            InputFamily::Keyboard => &self.connected_keyboards,
+            InputFamily::Mouse => &self.connected_mice,
+        }.write() else {
+            return;
         };
 
-        vec.iter().position(|it| *it == id).map(|it| vec.remove(it));
+        devices.iter().position(|it| *it == id).map(|it| devices.remove(it));
     }
 
     pub fn disconnect_device_raw(

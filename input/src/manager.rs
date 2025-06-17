@@ -1,3 +1,5 @@
+use std::sync::{Arc, RwLock};
+
 use num_enum::TryFromPrimitive;
 use pawkit_bitarray::BitArray;
 use pawkit_holy_array::HolyArray;
@@ -33,26 +35,28 @@ impl InputFamily {
 
 pub struct InputDeviceManager {
     family: InputFamily,
-    devices: HolyArray<InputDeviceState>,
+    devices: RwLock<HolyArray<Arc<InputDeviceState>>>,
 }
 
 pub struct InputDeviceState {
     raw_id: usize,
-    pub digital_inputs: BitArray,
-    pub analog_inputs: Box<[f32]>,
+    pub digital_inputs: RwLock<BitArray>,
+    pub analog_inputs: RwLock<Box<[f32]>>,
 }
 
 impl InputDeviceManager {
     pub fn new(family: InputFamily) -> Self {
         return Self {
             family,
-            devices: HolyArray::new(),
+            devices: RwLock::new(HolyArray::new()),
         };
     }
 
     pub fn raw_id_to_id(&self, raw_id: usize) -> Option<usize> {
-        for id in 0..self.devices.len() {
-            let Some(device) = self.devices.get(id) else {
+        let devices = self.devices.read().ok()?;
+        
+        for id in 0..devices.len() {
+            let Some(device) = devices.get(id) else {
                 continue;
             };
 
@@ -64,19 +68,23 @@ impl InputDeviceManager {
         return None;
     }
 
-    pub fn device_connected(&mut self, raw_id: usize) -> usize {
-        return self.devices.acquire(InputDeviceState {
+    pub fn device_connected(&self, raw_id: usize) -> usize {
+        let mut devices = self.devices.write().unwrap();
+
+        return devices.acquire(Arc::new(InputDeviceState {
             raw_id,
-            digital_inputs: BitArray::new(self.family.digital_count()),
-            analog_inputs: vec![0f32; self.family.analog_count()].into_boxed_slice(),
-        });
+            digital_inputs: RwLock::new(BitArray::new(self.family.digital_count())),
+            analog_inputs: RwLock::new(vec![0f32; self.family.analog_count()].into_boxed_slice()),
+        }));
     }
 
-    pub fn device_disconnected(&mut self, id: usize) {
-        self.devices.release(id);
+    pub fn device_disconnected(&self, id: usize) {
+        let mut devices = self.devices.write().unwrap();
+
+        devices.release(id);
     }
 
-    pub fn device_disconnected_raw(&mut self, raw_id: usize) {
+    pub fn device_disconnected_raw(&self, raw_id: usize) {
         let Some(id) = self.raw_id_to_id(raw_id) else {
             return;
         };
@@ -84,49 +92,47 @@ impl InputDeviceManager {
         self.device_disconnected(id);
     }
 
-    pub fn get_state(&self, id: usize) -> Option<&InputDeviceState> {
-        return self.devices.get(id);
+    pub fn get_state(&self, id: usize) -> Option<Arc<InputDeviceState>> {
+        let devices = self.devices.read().ok()?;
+
+        return devices.get(id).map(Arc::clone);
     }
 
-    pub fn get_state_raw(&self, raw_id: usize) -> Option<&InputDeviceState> {
+    pub fn get_state_raw(&self, raw_id: usize) -> Option<Arc<InputDeviceState>> {
         let Some(id) = self.raw_id_to_id(raw_id) else {
             return None;
         };
 
         return self.get_state(id);
     }
-
-    pub fn get_state_mut(&mut self, id: usize) -> Option<&mut InputDeviceState> {
-        return self.devices.get_mut(id);
-    }
-
-    pub fn get_state_raw_mut(&mut self, raw_id: usize) -> Option<&mut InputDeviceState> {
-        let Some(id) = self.raw_id_to_id(raw_id) else {
-            return None;
-        };
-
-        return self.get_state_mut(id);
-    }
 }
 
 impl InputDeviceState {
     pub fn get_analog(&self, axis: usize) -> f32 {
-        return self.analog_inputs[axis];
+        let analog = self.analog_inputs.read().unwrap();
+
+        return analog[axis];
     }
 
-    pub fn get_digital(&self, button: usize) -> bool {
-        return self.digital_inputs.get(button).unwrap();
+    pub fn get_digital(&self, button: usize) -> bool {  
+        let digital = self.digital_inputs.read().unwrap();
+
+        return digital.get(button).unwrap();
     }
 
-    pub fn set_analog(&mut self, axis: usize, value: f32) {
-        self.analog_inputs[axis] = value
+    pub fn set_analog(&self, axis: usize, value: f32) {
+        let mut analog = self.analog_inputs.write().unwrap();
+
+        analog[axis] = value
     }
 
-    pub fn set_digital(&mut self, button: usize, value: bool) {
+    pub fn set_digital(&self, button: usize, value: bool) {
+        let mut digital = self.digital_inputs.write().unwrap();
+
         if value {
-            self.digital_inputs.set(button);
+            digital.set(button);
         } else {
-            self.digital_inputs.reset(button);
+            digital.reset(button);
         }
     }
 }

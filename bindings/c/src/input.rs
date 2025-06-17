@@ -439,12 +439,12 @@ unsafe extern "C" fn pawkit_input_manager_get_state(
     };
 
     return match family {
-        INPUT_FAMILY_KEY => manager.devices.keyboard_manager.get_state_raw_mut(id),
-        INPUT_FAMILY_MOUSE => manager.devices.mouse_manager.get_state_raw_mut(id),
-        INPUT_FAMILY_JOY => manager.devices.gamepad_manager.get_state_raw_mut(id),
+        INPUT_FAMILY_KEY => manager.devices.keyboard_manager.get_state_raw(id),
+        INPUT_FAMILY_MOUSE => manager.devices.mouse_manager.get_state_raw(id),
+        INPUT_FAMILY_JOY => manager.devices.gamepad_manager.get_state_raw(id),
         _ => None,
     }
-    .map(|it| it as CInputDeviceState)
+    .map(|it| it.as_ref() as *const InputDeviceState as CInputDeviceState)
     .unwrap_or(null_mut());
 }
 
@@ -473,8 +473,6 @@ unsafe extern "C" fn pawkit_input_state_set_axis(
 
     state.set_analog(axis as usize, value);
 }
-
-type CInputHandler = *mut InputHandler;
 
 #[no_mangle]
 unsafe extern "C" fn pawkit_input_manager_create_handler(

@@ -223,7 +223,7 @@ impl LuaInputManager {
             InputFamily::Mouse => &mut this.manager.devices.mouse_manager,
             InputFamily::Gamepad => &mut this.manager.devices.gamepad_manager,
         }
-        .get_state_mut(args.1) else {
+        .get_state(args.1) else {
             return Err(LuaError::RuntimeError("Index does not exist.".into()));
         };
 
@@ -250,7 +250,7 @@ impl LuaInputManager {
             InputFamily::Mouse => &mut this.manager.devices.mouse_manager,
             InputFamily::Gamepad => &mut this.manager.devices.gamepad_manager,
         }
-        .get_state_mut(args.1) else {
+        .get_state(args.1) else {
             return Err(LuaError::RuntimeError("Index does not exist.".into()));
         };
 
