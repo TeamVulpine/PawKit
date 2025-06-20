@@ -51,14 +51,25 @@ pawkit-bitarray.version = "0.1.1"
 pawkit-input.path = "./input"
 pawkit-input.version = "0.1.1"
 
-tokio-tungstenite.version = "0.26.2"
-tokio-tungstenite.features = ["native-tls"]
 tokio-native-tls = "0.3.1"
-
 num_enum = "0.7.3"
-
 serde.version = "1.0.219"
 serde.features = ["serde_derive"]
+just-webrtc = "0.2.0"
+wasm-bindgen = "0.2.100"
+wasm-bindgen-futures = "0.4.50"
+futures-util = "0.3.31"
+chrono = "0.4.41"
+serde_json = "1.0.140"
+ciborium = "0.2.2"
+anyhow = "1.0.98"
+bytes = "1.10.1"
+reqwest = "0.12.15"
+zip = "4.1.0"
+
+tokio-tungstenite.version = "0.26.2"
+tokio-tungstenite.features = ["native-tls"]
+
 
 web-sys.version = "0.3.77"
 web-sys.features = [
@@ -82,21 +93,6 @@ web-sys.features = [
 
 tokio.version = "1.45.0"
 tokio.features = ["sync", "rt", "macros"]
-
-just-webrtc = "0.2.0"
-wasm-bindgen = "0.2.100"
-wasm-bindgen-futures = "0.4.50"
-futures-util = "0.3.31"
-chrono = "0.4.41"
-
-serde_json = "1.0.140"
-ciborium = "0.2.2"
-
-anyhow = "1.0.98"
-bytes = "1.10.1"
-
-reqwest = "0.12.15"
-bytemuck = { version = "1.23.1", features = ["derive"] }
 
 mlua.version = "0.10.5"
 mlua.features = ["lua54", "module", "serialize"] 
