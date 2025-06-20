@@ -1,3 +1,5 @@
+use std::{collections::HashMap, sync::Arc};
+
 use crate::crc;
 
 mod data;
@@ -13,52 +15,27 @@ where
 #[derive(Debug)]
 enum CompressionMethod {
     Uncompressed,
-    Shrunk,
-    Reduced1,
-    Reduced2,
-    Reduced3,
-    Imploded,
-    Bzip2,
-    Lzma,
-    WavPack,
-    Ppmd,
-    Xz,
+    Deflate,
 }
 
 #[derive(Debug)]
 pub enum CompressionError {
     UnimplementedCompressionMethod,
     ChecksumMismatch,
+    UnknwonMethod(u16),
 }
 
 impl CompressionMethod {
     const RAW_UNCOMPRESSED: u16 = 0;
-    const RAW_SHRUNK: u16 = 1;
-    const RAW_REDUCED_1: u16 = 2;
-    const RAW_REDUCED_2: u16 = 3;
-    const RAW_REDUCED_3: u16 = 4;
-    const RAW_IMPLODED: u16 = 5;
-    const RAW_BZIP_2: u16 = 10;
-    const RAW_LZMA: u16 = 11;
-    const RAW_WAV_PACK: u16 = 14;
-    const RAW_PPMD: u16 = 15;
-    const RAW_XZ: u16 = 19;
+    const RAW_UNCOMPRESSED_PKWARE: u16 = 5;
+    const RAW_DEFLATE: u16 = 8;
 
-    fn from(value: u16) -> Option<Self> {
-        return Some(match value {
-            Self::RAW_UNCOMPRESSED => Self::Uncompressed,
-            Self::RAW_SHRUNK => Self::Shrunk,
-            Self::RAW_REDUCED_1 => Self::Reduced1,
-            Self::RAW_REDUCED_2 => Self::Reduced2,
-            Self::RAW_REDUCED_3 => Self::Reduced3,
-            Self::RAW_IMPLODED => Self::Imploded,
-            Self::RAW_BZIP_2 => Self::Bzip2,
-            Self::RAW_LZMA => Self::Lzma,
-            Self::RAW_WAV_PACK => Self::WavPack,
-            Self::RAW_PPMD => Self::Ppmd,
-            Self::RAW_XZ => Self::Xz,
+    fn from(value: u16) -> Result<Self, CompressionError> {
+        return Ok(match value {
+            Self::RAW_UNCOMPRESSED | Self::RAW_UNCOMPRESSED_PKWARE => Self::Uncompressed,
+            Self::RAW_DEFLATE => Self::Deflate,
 
-            _ => return None,
+            _ => return Err(CompressionError::UnknwonMethod(value)),
         });
     }
 
@@ -81,7 +58,7 @@ impl CompressionMethod {
 
 #[derive(Debug)]
 struct FileEntry {
-    name: String,
+    name: Arc<str>,
     decompressed_size: u64,
     checksum: u32,
     compression_method: CompressionMethod,
@@ -89,8 +66,21 @@ struct FileEntry {
 }
 
 #[derive(Debug)]
+enum DirectoryEntryKind {
+    File(usize),
+    Directory(HashMap<Arc<str>, DirectoryEntry>),
+}
+
+#[derive(Debug)]
+struct DirectoryEntry {
+    full_path: Arc<str>,
+    kind: DirectoryEntryKind,
+}
+
+#[derive(Debug)]
 pub struct ZipArchive {
-    entries: Vec<FileEntry>,
+    entries: Box<[FileEntry]>,
+    root_directory: DirectoryEntry,
 }
 
 #[derive(Debug)]
@@ -101,7 +91,6 @@ pub enum ZipArchiveError {
     InvalidUtf8,
     LocalFileHeaderOutOfBounds,
     FileDataOutOfBounds,
-    InvalidCompressionMethod,
     FileNotFound,
     FilesizeMismatch,
     InvalidSignature,
@@ -115,6 +104,10 @@ impl From<CompressionError> for ZipArchiveError {
 }
 
 impl ZipArchive {
+    fn build_directory_tree(entries: &[FileEntry]) -> DirectoryEntry {
+        return DirectoryEntry { full_path: "".into(), kind: DirectoryEntryKind::File(0) };
+    }
+
     fn parse_central(
         file_bytes: &[u8],
         offset: usize,
@@ -161,12 +154,11 @@ impl ZipArchive {
 
         let compressed_data = &file_bytes[file_data_start..file_data_end];
 
-        let compression_method = CompressionMethod::from(central_dir_header.compression_method)
-            .ok_or(ZipArchiveError::InvalidCompressionMethod)?;
+        let compression_method = CompressionMethod::from(central_dir_header.compression_method)?;
 
         return Ok((
             FileEntry {
-                name: file_name,
+                name: file_name.into(),
                 decompressed_size: ext_data.size_decompressed,
                 checksum: central_dir_header.checksum,
                 compression_method,
@@ -196,7 +188,10 @@ impl ZipArchive {
             entries.push(file_entry);
         }
 
-        return Ok(Self { entries });
+        return Ok(Self {
+            root_directory: Self::build_directory_tree(&entries),
+            entries: entries.into_boxed_slice(),
+        });
     }
 
     fn from_zip64(
@@ -274,7 +269,7 @@ impl ZipArchive {
         return None;
     }
 
-    pub fn get_file_raw(&self, name: &str) -> Result<Vec<u8>, ZipArchiveError> {
+    pub fn get_file(&self, name: &str) -> Result<Vec<u8>, ZipArchiveError> {
         let Some(entry) = self.get_entry(name) else {
             return Err(ZipArchiveError::FileNotFound);
         };
@@ -290,8 +285,8 @@ impl ZipArchive {
         return Ok(data);
     }
 
-    pub fn get_file_raw_str(&self, name: &str) -> Result<String, ZipArchiveError> {
-        let data = self.get_file_raw(name)?;
+    pub fn get_file_str(&self, name: &str) -> Result<String, ZipArchiveError> {
+        let data = self.get_file(name)?;
 
         return str::from_utf8(&data)
             .map_err(|_| ZipArchiveError::InvalidUtf8)
