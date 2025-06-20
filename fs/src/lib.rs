@@ -1,9 +1,7 @@
 #![feature(let_chains)]
 
 use std::{
-    collections::HashSet,
-    fs::{self, File, ReadDir},
-    io::{self, Read},
+    io,
     ops::Deref,
     path::Path,
     sync::{Arc, Mutex},
@@ -11,70 +9,20 @@ use std::{
 
 use zip::{result::ZipError, ZipArchive};
 
-use crate::buffer::VfsBuffer;
+mod buffer;
+pub use buffer::*;
 
-pub mod buffer;
+mod list_directories;
+pub use list_directories::*;
 
-#[derive(Debug, Clone)]
-enum VfsKind {
-    Working,
-    ZipArchive(Arc<Mutex<ZipArchive<VfsBuffer>>>),
-}
+mod list_files;
+pub use list_files::*;
 
-impl VfsKind {
-    fn subdirectory_exists(&self, subdirectory: &str) -> bool {
-        match self {
-            VfsKind::Working => {
-                let path = Path::new(subdirectory);
-                let Ok(meta) = fs::metadata(path) else {
-                    return false;
-                };
+mod list_files_recursive;
+pub use list_files_recursive::*;
 
-                return meta.is_dir();
-            }
-
-            VfsKind::ZipArchive(zip) => {
-                let prefix = format!("{}/", subdirectory);
-
-                let Ok(mut zip) = zip.lock() else {
-                    return false;
-                };
-
-                for i in 0..zip.len() {
-                    if let Ok(file) = zip.by_index(i) {
-                        if file.name().starts_with(&prefix) {
-                            return true;
-                        }
-                    }
-                }
-
-                return false;
-            }
-        }
-    }
-
-    fn open(&self, path: &str) -> Result<VfsBuffer, VfsError> {
-        match self {
-            VfsKind::Working => {
-                let path = Path::new(path);
-                return Ok(File::open(path)?.into());
-            }
-
-            VfsKind::ZipArchive(zip) => {
-                let Ok(mut zip) = zip.lock() else {
-                    return Err(VfsError::Other);
-                };
-
-                let mut file = zip.by_name(path)?;
-
-                let mut buf = vec![];
-                file.read_to_end(&mut buf)?;
-
-                return Ok(buf.deref().into());
-            }
-        }
-    }
-}
+mod kind;
+use kind::*;
 
 #[derive(Debug)]
 pub enum VfsError {
@@ -93,154 +41,6 @@ impl From<io::Error> for VfsError {
 impl From<ZipError> for VfsError {
     fn from(value: ZipError) -> Self {
         return Self::ZipError(value);
-    }
-}
-
-pub enum VfsListDirectories {
-    Working(ReadDir),
-    ZipArchive {
-        index: usize,
-        prefix: Box<str>,
-        zip: Arc<Mutex<ZipArchive<VfsBuffer>>>,
-        seen: HashSet<String>,
-    },
-}
-
-impl Iterator for VfsListDirectories {
-    type Item = Result<String, VfsError>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self {
-            Self::Working(iter) => {
-                let mut name = None;
-                while let None = name {
-                    match iter.next()?.map_err(Into::into) {
-                        Ok(dir) => match dir.file_type().map_err(Into::into) {
-                            Ok(it) => {
-                                if it.is_dir() {
-                                    name = dir.file_name().to_str().map(Into::into);
-                                }
-                            }
-                            Err(err) => return Some(Err(err)),
-                        },
-
-                        Err(err) => {
-                            return Some(Err(err));
-                        }
-                    }
-                }
-
-                return Some(Ok(name?));
-            }
-
-            Self::ZipArchive {
-                index,
-                prefix,
-                zip,
-                seen,
-            } => {
-                let Ok(mut zip) = zip.lock() else {
-                    return Some(Err(VfsError::Other));
-                };
-
-                while *index < zip.len() {
-                    let file = match zip.by_index(*index).map_err(Into::into) {
-                        Ok(file) => file,
-                        Err(err) => return Some(Err(err)),
-                    };
-                    *index += 1;
-
-                    let name = file.name();
-                    let prefix: &str = &prefix;
-                    if name.starts_with(prefix) {
-                        let remaining = &name[prefix.len()..];
-
-                        if let Some((dir, _)) = remaining.split_once('/') {
-                            if seen.insert(dir.to_string()) {
-                                return Some(Ok(dir.to_string()));
-                            }
-                        }
-                    }
-                }
-
-                return None;
-            }
-        }
-    }
-}
-
-pub enum VfsListFiles {
-    Working(ReadDir),
-    ZipArchive {
-        index: usize,
-        prefix: Box<str>,
-        zip: Arc<Mutex<ZipArchive<VfsBuffer>>>,
-    },
-}
-
-impl VfsListFiles {
-    pub fn with_extension<S: Deref<Target = str>>(
-        self,
-        ext: S,
-    ) -> impl Iterator<Item = Result<String, VfsError>> {
-        let ext = ext.to_string();
-        return self.filter(move |it| it.as_ref().map(|it| it.ends_with(&ext)).unwrap_or(true));
-    }
-}
-
-impl Iterator for VfsListFiles {
-    type Item = Result<String, VfsError>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self {
-            Self::Working(iter) => {
-                let mut name = None;
-                while let None = name {
-                    match iter.next()?.map_err(Into::into) {
-                        Ok(dir) => match dir.file_type().map_err(Into::into) {
-                            Ok(it) => {
-                                if it.is_file() {
-                                    name = dir.file_name().to_str().map(Into::into);
-                                }
-                            }
-                            Err(err) => return Some(Err(err)),
-                        },
-
-                        Err(err) => {
-                            return Some(Err(err));
-                        }
-                    }
-                }
-
-                return Some(Ok(name?));
-            }
-
-            Self::ZipArchive { index, prefix, zip } => {
-                let Ok(mut zip) = zip.lock() else {
-                    return Some(Err(VfsError::Other));
-                };
-
-                while *index < zip.len() {
-                    let file = match zip.by_index(*index).map_err(Into::into) {
-                        Ok(file) => file,
-                        Err(err) => return Some(Err(err)),
-                    };
-                    *index += 1;
-
-                    let name = file.name();
-                    let prefix: &str = &prefix;
-                    if name.starts_with(prefix) {
-                        let remaining = &name[prefix.len()..];
-
-                        if !remaining.contains('/') && file.is_file() {
-                            return Some(Ok(remaining.to_string()));
-                        }
-                    }
-                }
-
-                return None;
-            }
-        }
     }
 }
 
@@ -374,5 +174,13 @@ impl Vfs {
                 })
             }
         };
+    }
+
+    pub fn list_files_recursive(&self) -> Result<VfsListFilesRecursive, VfsError> {
+        return Ok(VfsListFilesRecursive {
+            stack: vec![(self.clone(), self.list_subdirectories()?)],
+            files: Some(self.list_files()?),
+            prefix: self.subdirectory.clone().unwrap_or_default(),
+        });
     }
 }
