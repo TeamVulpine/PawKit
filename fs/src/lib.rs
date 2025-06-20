@@ -241,7 +241,9 @@ impl Vfs {
     }
 
     pub fn open(&self, path: &str) -> Result<VfsBuffer, VfsError> {
-        return self.kind.open(path);
+        let path = self.subdirectory.as_ref().map(|it| format!("{}/{}", it, path)).unwrap_or_else(|| path.into());
+
+        return self.kind.open(&path);
     }
 
     pub fn list_subdirectories(&self) -> Result<VfsListDirectories, VfsError> {
