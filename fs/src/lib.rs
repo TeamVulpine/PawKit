@@ -217,17 +217,16 @@ impl Vfs {
         return Ok(Self { kind, subdirectory });
     }
 
-    pub fn working<S: Deref<Target = str>>(subdirectory: S) -> Result<Self, VfsError> {
-        return Self::from_kind(Some(subdirectory), VfsKind::Working);
+    pub fn working() -> Result<Self, VfsError> {
+        return Self::from_kind::<&str>(None, VfsKind::Working);
     }
 
-    pub fn zip<B: Into<VfsBuffer>, S: Deref<Target = str>>(
-        bytes: B,
-        subdirectory: Option<S>,
+    pub fn zip<B: Into<VfsBuffer>>(
+        buf: B,
     ) -> Result<Self, VfsError> {
-        return Self::from_kind(
-            subdirectory,
-            VfsKind::ZipArchive(Arc::new(Mutex::new(ZipArchive::new(bytes.into())?))),
+        return Self::from_kind::<&str>(
+            None,
+            VfsKind::ZipArchive(Arc::new(Mutex::new(ZipArchive::new(buf.into())?))),
         );
     }
 
