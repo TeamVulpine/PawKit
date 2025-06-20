@@ -111,7 +111,7 @@ impl Iterator for VfsListDirectories {
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
-            VfsListDirectories::Working(iter) => {
+            Self::Working(iter) => {
                 let mut name = None;
                 while let None = name {
                     match iter.next()?.map_err(Into::into) {
@@ -133,7 +133,7 @@ impl Iterator for VfsListDirectories {
                 return Some(Ok(name?));
             }
 
-            VfsListDirectories::ZipArchive {
+            Self::ZipArchive {
                 index,
                 prefix,
                 zip,
@@ -159,6 +159,81 @@ impl Iterator for VfsListDirectories {
                             if seen.insert(dir.to_string()) {
                                 return Some(Ok(dir.to_string()));
                             }
+                        }
+                    }
+                }
+
+                return None;
+            }
+        }
+    }
+}
+
+pub enum VfsListFiles {
+    Working(ReadDir),
+    ZipArchive {
+        index: usize,
+        prefix: Box<str>,
+        zip: Arc<Mutex<ZipArchive<VfsBuffer>>>,
+    },
+}
+
+impl VfsListFiles {
+    pub fn with_extension<S: Deref<Target = str>>(
+        self,
+        ext: S,
+    ) -> impl Iterator<Item = Result<String, VfsError>> {
+        let ext = ext.to_string();
+        return self.filter(move |it| it.as_ref().map(|it| it.ends_with(&ext)).unwrap_or(true));
+    }
+}
+
+impl Iterator for VfsListFiles {
+    type Item = Result<String, VfsError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            Self::Working(iter) => {
+                let mut name = None;
+                while let None = name {
+                    match iter.next()?.map_err(Into::into) {
+                        Ok(dir) => match dir.file_type().map_err(Into::into) {
+                            Ok(it) => {
+                                if it.is_file() {
+                                    name = dir.file_name().to_str().map(Into::into);
+                                }
+                            }
+                            Err(err) => return Some(Err(err)),
+                        },
+
+                        Err(err) => {
+                            return Some(Err(err));
+                        }
+                    }
+                }
+
+                return Some(Ok(name?));
+            }
+
+            Self::ZipArchive { index, prefix, zip } => {
+                let Ok(mut zip) = zip.lock() else {
+                    return Some(Err(VfsError::Other));
+                };
+
+                while *index < zip.len() {
+                    let file = match zip.by_index(*index).map_err(Into::into) {
+                        Ok(file) => file,
+                        Err(err) => return Some(Err(err)),
+                    };
+                    *index += 1;
+
+                    let name = file.name();
+                    let prefix: &str = &prefix;
+                    if name.starts_with(prefix) {
+                        let remaining = &name[prefix.len()..];
+
+                        if !remaining.contains('/') && file.is_file() {
+                            return Some(Ok(remaining.to_string()));
                         }
                     }
                 }
@@ -221,9 +296,7 @@ impl Vfs {
         return Self::from_kind::<&str>(None, VfsKind::Working);
     }
 
-    pub fn zip<B: Into<VfsBuffer>>(
-        buf: B,
-    ) -> Result<Self, VfsError> {
+    pub fn zip<B: Into<VfsBuffer>>(buf: B) -> Result<Self, VfsError> {
         return Self::from_kind::<&str>(
             None,
             VfsKind::ZipArchive(Arc::new(Mutex::new(ZipArchive::new(buf.into())?))),
@@ -241,7 +314,11 @@ impl Vfs {
     }
 
     pub fn open(&self, path: &str) -> Result<VfsBuffer, VfsError> {
-        let path = self.subdirectory.as_ref().map(|it| format!("{}/{}", it, path)).unwrap_or_else(|| path.into());
+        let path = self
+            .subdirectory
+            .as_ref()
+            .map(|it| format!("{}/{}", it, path))
+            .unwrap_or_else(|| path.into());
 
         return self.kind.open(&path);
     }
@@ -268,6 +345,32 @@ impl Vfs {
                         .map_or("".into(), |it| format!("{}/", it).into()),
                     zip: zip.clone(),
                     seen: std::collections::HashSet::new(),
+                })
+            }
+        };
+    }
+
+    pub fn list_files(&self) -> Result<VfsListFiles, VfsError> {
+        match &self.kind {
+            VfsKind::Working => {
+                let path = self
+                    .subdirectory
+                    .as_ref()
+                    .map_or(Path::new("."), |it| Path::new(it.deref()));
+
+                let entries = path.read_dir()?;
+
+                return Ok(VfsListFiles::Working(entries));
+            }
+
+            VfsKind::ZipArchive(zip) => {
+                return Ok(VfsListFiles::ZipArchive {
+                    index: 0,
+                    prefix: self
+                        .subdirectory
+                        .clone()
+                        .map_or("".into(), |it| format!("{}/", it).into()),
+                    zip: zip.clone(),
                 })
             }
         };
