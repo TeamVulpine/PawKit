@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use crate::{Vfs, VfsError, VfsListDirectories, VfsListFiles};
 
 pub struct VfsListFilesRecursive {
@@ -9,14 +7,6 @@ pub struct VfsListFilesRecursive {
 }
 
 impl VfsListFilesRecursive {
-    pub fn with_extension<S: Deref<Target = str>>(
-        self,
-        ext: S,
-    ) -> impl Iterator<Item = Result<String, VfsError>> {
-        let ext = ext.to_string();
-        return self.filter(move |it| it.as_ref().map(|it| it.ends_with(&ext)).unwrap_or(true));
-    }
-    
     fn next_file(&mut self) -> Option<<Self as Iterator>::Item> {
         if let Some(files) = &mut self.files {
             if let Some(file) = files.next() {

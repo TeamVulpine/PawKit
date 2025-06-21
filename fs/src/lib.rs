@@ -1,10 +1,7 @@
 #![feature(let_chains)]
 
 use std::{
-    io,
-    ops::Deref,
-    path::Path,
-    sync::{Arc, Mutex},
+    io, ops::Deref, path::Path, sync::{Arc, Mutex}
 };
 
 use zip::{result::ZipError, ZipArchive};
@@ -184,3 +181,15 @@ impl Vfs {
         });
     }
 }
+
+pub trait VfsListUtils: Iterator<Item = Result<String, VfsError>> + Sized {
+    fn with_extension<S: Deref<Target = str>>(
+        self,
+        ext: S,
+    ) -> impl Iterator<Item = Result<String, VfsError>> {
+        let ext = ext.to_string();
+        return self.filter(move |it| it.as_ref().map(|it| it.ends_with(&ext)).unwrap_or(true));
+    }
+}
+
+impl<T: Iterator<Item = Result<String, VfsError>> + Sized> VfsListUtils for T {}

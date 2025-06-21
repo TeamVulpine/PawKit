@@ -1,6 +1,5 @@
 use std::{
     fs::ReadDir,
-    ops::Deref,
     sync::{Arc, Mutex},
 };
 
@@ -18,14 +17,6 @@ pub enum VfsListFiles {
 }
 
 impl VfsListFiles {
-    pub fn with_extension<S: Deref<Target = str>>(
-        self,
-        ext: S,
-    ) -> impl Iterator<Item = Result<String, VfsError>> {
-        let ext = ext.to_string();
-        return self.filter(move |it| it.as_ref().map(|it| it.ends_with(&ext)).unwrap_or(true));
-    }
-
     fn next_working(iter: &mut ReadDir) -> Option<<Self as Iterator>::Item> {
         let mut name = None;
         while name.is_none() {

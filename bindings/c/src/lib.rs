@@ -1,10 +1,11 @@
-#![feature(decl_macro)]
+#![feature(decl_macro, generic_atomic)]
 
 use std::{
     ffi::{c_char, CString},
     ptr,
 };
 
+mod fs;
 mod input;
 mod logger;
 mod net;
@@ -98,6 +99,22 @@ unsafe fn drop_from_heap<T>(ptr: *mut T) {
     drop(Box::from_raw(ptr));
 }
 
+unsafe fn move_to_stack<T>(ptr: *mut T) -> Option<T> {
+    if !ptr.is_aligned() || ptr.is_null() {
+        return None;
+    }
+
+    return Some(*Box::from_raw(ptr));
+}
+
+unsafe fn ptr_to_slice_mut<'a, T>(ptr: *mut T, size: usize) -> Option<&'a mut [T]> {
+    if !ptr.is_aligned() || ptr.is_null() || size == 0 {
+        return None;
+    }
+
+    return Some(std::slice::from_raw_parts_mut(ptr, size));
+}
+
 unsafe fn ptr_to_slice<'a, T>(ptr: *const T, size: usize) -> Option<&'a [T]> {
     if !ptr.is_aligned() || ptr.is_null() || size == 0 {
         return None;
@@ -120,4 +137,33 @@ unsafe fn ptr_to_ref<'a, T>(ptr: *const T) -> Option<&'a T> {
     }
 
     return Some(&*ptr);
+}
+
+unsafe fn move_slice_to_heap<T: Copy>(slice: &[T], size: &mut usize) -> *mut T {
+    let boxed: Box<[T]> = slice.to_vec().into_boxed_slice();
+
+    *size = boxed.len();
+
+    let ptr = Box::into_raw(boxed) as *mut T;
+
+    return ptr;
+}
+
+unsafe fn drop_slice_from_heap<T>(ptr: *mut T, size: usize) {
+    if ptr.is_null() || !ptr.is_aligned() || size == 0 {
+        return;
+    }
+
+    let slice = std::slice::from_raw_parts_mut(ptr, size);
+    drop(Box::from_raw(slice));
+}
+
+#[no_mangle]
+unsafe extern "C" fn pawkit_free_string(str: *const c_char) {
+    drop_cstr(str);
+}
+
+#[no_mangle]
+unsafe extern "C" fn pawkit_free_array(slice: *mut u8, size: usize) {
+    drop_slice_from_heap(slice, size);
 }

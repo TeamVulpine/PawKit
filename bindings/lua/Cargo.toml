@@ -15,5 +15,6 @@ pawkit-logger.workspace = true
 pawkit-net.workspace = true
 pawkit-net-signaling.workspace = true
 pawkit-input.workspace = true
+pawkit-fs.workspace = true
 
 mlua.workspace = true

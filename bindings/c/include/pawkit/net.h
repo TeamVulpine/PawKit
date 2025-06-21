@@ -22,7 +22,6 @@ pawkit_net_host_peer pawkit_net_host_peer_create(char *server_url, pawkit_u32 ga
 void pawkit_net_host_peer_destroy(pawkit_net_host_peer peer);
 
 char const *pawkit_net_host_peer_get_host_id(pawkit_net_host_peer peer);
-void pawkit_net_host_peer_free_host_id(char const *id);
 
 void pawkit_net_host_peer_send_packet(pawkit_net_host_peer peer, pawkit_usize peer_id, pawkit_u8 *data, pawkit_usize size);
 
@@ -128,7 +127,7 @@ namespace PawKit::Networking {
 
             std::string id = rawId;
 
-            pawkit_net_host_peer_free_host_id(rawId);
+            pawkit_free_string(rawId);
 
             return id;
         }

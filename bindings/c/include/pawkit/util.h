@@ -29,6 +29,9 @@ typedef ptrdiff_t pawkit_isize;
 typedef float pawkit_f32;
 typedef double pawkit_f64;
 
+void pawkit_free_string(char const *str);
+void pawkit_free_array(pawkit_u8 const *buf);
+
 #ifdef __cplusplus
 
 #include <memory>
