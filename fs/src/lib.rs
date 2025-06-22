@@ -1,7 +1,10 @@
 #![feature(let_chains)]
 
 use std::{
-    io, ops::Deref, path::Path, sync::{Arc, Mutex}
+    io,
+    ops::Deref,
+    path::Path,
+    sync::{Arc, Mutex},
 };
 
 use zip::{result::ZipError, ZipArchive};

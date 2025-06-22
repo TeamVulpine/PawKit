@@ -84,14 +84,9 @@ namespace PawKit::Networking {
             if (GetType() != PAWKIT_NET_HOST_EVENT_TYPE_PACKET_RECEIVED)
                 return {};
 
-            pawkit_usize size = 0;
-
-            pawkit_u8 const *data = pawkit_net_host_event_get_data(Get(), &size);
-
-            if (!data)
-                return {};
-
-            return std::span(data, size);
+            return GetBuf<false>([&](pawkit_usize &size) {
+                return pawkit_net_host_event_get_data(Get(), &size);
+            });
         }
     };
 
@@ -123,13 +118,9 @@ namespace PawKit::Networking {
         }
 
         inline std::string GetHostId() {
-            char const* rawId = pawkit_net_host_peer_get_host_id(Get());
-
-            std::string id = rawId;
-
-            pawkit_free_string(rawId);
-
-            return id;
+            return GetString([&] {
+                return pawkit_net_host_peer_get_host_id(Get());
+            });
         }
     };
 
@@ -148,16 +139,13 @@ namespace PawKit::Networking {
             return pawkit_net_client_event_get_type(Get());
         }
 
-        std::span<const pawkit_u8> GetData() {
+        std::span<pawkit_u8 const> GetData() {
             if (GetType() != PAWKIT_NET_CLIENT_EVENT_TYPE_PACKET_RECEIVED)
                 return {};
 
-            pawkit_usize size = 0;
-            pawkit_u8 const *data = pawkit_net_client_event_get_data(Get(), &size);
-            if (!data)
-                return {};
-
-            return std::span(data, data + size);
+            return GetBuf<false>([&](pawkit_usize &size) {
+                return pawkit_net_client_event_get_data(Get(), &size);
+            });
         }
     };
 

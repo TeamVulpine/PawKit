@@ -329,12 +329,9 @@ namespace PawKit::Input {
         }
         
         inline std::optional<Frame> GetFrame(pawkit_usize handler, std::string const &name) {
-            Frame frame;
-            
-            if (!pawkit_input_manager_get_frame(Get(), handler, name.c_str(), &frame))
-                return std::nullopt;
-
-            return frame;
+            return GetOptional<Frame>([&](Frame &frame) {
+                return pawkit_input_manager_get_frame(Get(), handler, name.c_str(), &frame);
+            });
         }
 
         inline void ConnectDeviceToHandler(pawkit_usize handler, Family family, pawkit_usize device) {

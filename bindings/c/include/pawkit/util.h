@@ -37,6 +37,11 @@ void pawkit_free_array(pawkit_u8 const *buf);
 #include <memory>
 #include <concepts>
 #include <functional>
+#include <string>
+#include <vector>
+#include <span>
+#include <string_view>
+#include <optional>
 
 namespace PawKit {
     constexpr inline void NullDeleter(void *ptr) {}
@@ -94,6 +99,71 @@ namespace PawKit {
             return ptr.get();
         }
     };
+
+    template <typename T, typename TReturn, typename ...TArgs>
+    concept Callable = requires (T func, TArgs ...args) {
+        {func(args...)} -> std::same_as<TReturn>;
+    };
+
+    template <bool TOwned, typename TOwning, typename TNonOwning>
+    struct MaybeOwned;
+
+    template <typename TOwning, typename TNonOwning>
+    struct MaybeOwned<true, TOwning, TNonOwning> {
+        using Type = TOwning;
+    };
+
+    template <typename TOwning, typename TNonOwning>
+    struct MaybeOwned<false, TOwning, TNonOwning> {
+        using Type = TNonOwning;
+    };
+
+    template <bool TOwned>
+    using StrReturnType = MaybeOwned<TOwned, std::string, std::string_view>::Type;
+
+    template <bool TOwned = true, Callable<char const *> TFunc>
+    StrReturnType<TOwned> GetString(TFunc func) {
+        char const* rawStr = func();
+
+        if (!rawStr)
+            return "";
+
+        StrReturnType<TOwned> str = rawStr;
+
+        if constexpr (TOwned)
+            pawkit_free_string(rawStr);
+
+        return str;
+    }
+
+    template <bool TOwned>
+    using BufReturnType = MaybeOwned<TOwned, std::vector<pawkit_u8>, std::span<pawkit_u8 const>>::Type;
+
+    template <bool TOwned = true, Callable<pawkit_u8 const *, pawkit_usize &> TFunc>
+    BufReturnType<TOwned> GetBuf(TFunc func) {
+        pawkit_usize size = 0;
+        pawkit_u8 const *data = func(size);
+
+        if (!data || size == 0)
+            return {};
+
+        BufReturnType<TOwned> buf {data, data + size};
+
+        if constexpr (TOwned) 
+            pawkit_free_array(data);
+        
+        return buf;
+    }
+
+    template <typename T, Callable<bool, T &> TFunc>
+    std::optional<T> GetOptional(TFunc func) {
+        T value;
+
+        if (!func(value))
+            return std::nullopt;
+
+        return value;
+    }
 }
 
 #endif

@@ -1,8 +1,6 @@
 use std::{ffi::c_char, io::Read, ptr::null_mut};
 
-use pawkit_fs::{
-    Vfs, VfsBuffer, VfsError, VfsListUtils
-};
+use pawkit_fs::{Vfs, VfsBuffer, VfsError, VfsListUtils};
 
 use crate::{
     cstr_to_str, disown_str_to_cstr, drop_from_heap, move_slice_to_heap, move_to_heap,
@@ -188,7 +186,10 @@ unsafe extern "C" fn pawkit_vfs_list_destroy(list: CVfsList) {
 /// Takes ownership of the list.
 /// The pointer to the buffer will no longer be valid after calling.
 #[no_mangle]
-unsafe extern "C" fn pawkit_vfs_list_with_extension(list: CVfsList, extension: *const c_char) -> CVfsList {
+unsafe extern "C" fn pawkit_vfs_list_with_extension(
+    list: CVfsList,
+    extension: *const c_char,
+) -> CVfsList {
     let Some(value) = move_to_stack(list) else {
         return null_mut();
     };
