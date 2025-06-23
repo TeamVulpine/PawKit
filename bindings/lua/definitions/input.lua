@@ -480,4 +480,8 @@ end
 function InputManager:disconnect_device_from_handler(handler, family, device)
 end
 
+---@return InputManager
+function input.create_manager()
+end
+
 return input

@@ -56,19 +56,19 @@ pub struct LuaNetHostPeer {
 }
 
 impl LuaNetHostPeer {
-    fn lua_send_packet(_lua: &Lua, this: &Self, args: (usize, LuaString)) -> LuaResult<()> {
+    fn send_packet(_lua: &Lua, this: &Self, args: (usize, LuaString)) -> LuaResult<()> {
         this.peer.send_packet(args.0, &args.1.as_bytes());
 
         return Ok(());
     }
 
-    fn lua_shutdown(_lua: &Lua, this: &Self, _args: ()) -> LuaResult<()> {
+    fn shutdown(_lua: &Lua, this: &Self, _args: ()) -> LuaResult<()> {
         this.peer.shutdown();
 
         return Ok(());
     }
 
-    fn lua_next_event(
+    fn next_event(
         _lua: &Lua,
         this: &mut Self,
         _args: (),
@@ -80,17 +80,17 @@ impl LuaNetHostPeer {
         return Ok(Some(LuaNetHostPeerEvent { evt }));
     }
 
-    fn lua_get_host_id(_lua: &Lua, this: &mut Self, _args: ()) -> LuaResult<String> {
+    fn get_host_id(_lua: &Lua, this: &mut Self, _args: ()) -> LuaResult<String> {
         return Ok(this.peer.get_host_id().to_string());
     }
 }
 
 impl LuaUserData for LuaNetHostPeer {
     fn add_methods<M: LuaUserDataMethods<Self>>(methods: &mut M) {
-        methods.add_method("send_packet", Self::lua_send_packet);
-        methods.add_method("shutdown", Self::lua_shutdown);
-        methods.add_method_mut("next_event", Self::lua_next_event);
-        methods.add_method_mut("get_host_id", Self::lua_get_host_id);
+        methods.add_method("send_packet", Self::send_packet);
+        methods.add_method("shutdown", Self::shutdown);
+        methods.add_method_mut("next_event", Self::next_event);
+        methods.add_method_mut("get_host_id", Self::get_host_id);
     }
 }
 
@@ -104,7 +104,7 @@ impl LuaNetHostPeerEvent {
     const PACKET_RECEIVED: i32 = 2;
     const HOST_ID_UPDATED: i32 = 3;
 
-    fn lua_get_type(_lua: &Lua, this: &Self, _args: ()) -> LuaResult<i32> {
+    fn get_type(_lua: &Lua, this: &Self, _args: ()) -> LuaResult<i32> {
         return Ok(match this.evt {
             NetHostPeerEvent::PeerConnected { peer_id: _ } => Self::PEER_CONNECTED,
             NetHostPeerEvent::PeerDisconnected { peer_id: _ } => Self::PEER_DISCONNECTED,
@@ -116,7 +116,7 @@ impl LuaNetHostPeerEvent {
         });
     }
 
-    fn lua_get_peer_id(_lua: &Lua, this: &Self, _args: ()) -> LuaResult<Option<usize>> {
+    fn get_peer_id(_lua: &Lua, this: &Self, _args: ()) -> LuaResult<Option<usize>> {
         return Ok(match this.evt {
             NetHostPeerEvent::PeerConnected { peer_id } => Some(peer_id),
             NetHostPeerEvent::PeerDisconnected { peer_id } => Some(peer_id),
@@ -125,7 +125,7 @@ impl LuaNetHostPeerEvent {
         });
     }
 
-    fn lua_get_data(lua: &Lua, this: &Self, _args: ()) -> LuaResult<Option<LuaString>> {
+    fn get_data(lua: &Lua, this: &Self, _args: ()) -> LuaResult<Option<LuaString>> {
         let NetHostPeerEvent::PacketReceived { peer_id: _, data } = &this.evt else {
             return Ok(None);
         };
@@ -136,9 +136,9 @@ impl LuaNetHostPeerEvent {
 
 impl LuaUserData for LuaNetHostPeerEvent {
     fn add_methods<M: LuaUserDataMethods<Self>>(methods: &mut M) {
-        methods.add_method("get_type", Self::lua_get_type);
-        methods.add_method("get_peer_id", Self::lua_get_peer_id);
-        methods.add_method("get_data", Self::lua_get_data);
+        methods.add_method("get_type", Self::get_type);
+        methods.add_method("get_peer_id", Self::get_peer_id);
+        methods.add_method("get_data", Self::get_data);
     }
 }
 
@@ -147,13 +147,13 @@ pub struct LuaNetClientPeer {
 }
 
 impl LuaNetClientPeer {
-    fn lua_send_packet(_lua: &Lua, this: &Self, data: LuaString) -> LuaResult<()> {
+    fn send_packet(_lua: &Lua, this: &Self, data: LuaString) -> LuaResult<()> {
         this.peer.send_packet(&data.as_bytes());
 
         return Ok(());
     }
 
-    fn lua_next_event(
+    fn next_event(
         _lua: &Lua,
         this: &mut Self,
         _args: (),
@@ -165,7 +165,7 @@ impl LuaNetClientPeer {
         return Ok(Some(LuaNetClientPeerEvent { evt }));
     }
 
-    fn lua_disconnect(_lua: &Lua, this: &Self, _args: ()) -> LuaResult<()> {
+    fn disconnect(_lua: &Lua, this: &Self, _args: ()) -> LuaResult<()> {
         this.peer.disconnect();
 
         return Ok(());
@@ -174,9 +174,9 @@ impl LuaNetClientPeer {
 
 impl LuaUserData for LuaNetClientPeer {
     fn add_methods<M: LuaUserDataMethods<Self>>(methods: &mut M) {
-        methods.add_method("send_packet", Self::lua_send_packet);
-        methods.add_method_mut("next_event", Self::lua_next_event);
-        methods.add_method("disconnect", Self::lua_disconnect);
+        methods.add_method("send_packet", Self::send_packet);
+        methods.add_method_mut("next_event", Self::next_event);
+        methods.add_method("disconnect", Self::disconnect);
     }
 }
 
@@ -190,7 +190,7 @@ impl LuaNetClientPeerEvent {
     const CONNECTION_FAILED: i32 = 2;
     const PACKET_RECEIVED: i32 = 3;
 
-    fn lua_get_type(_lua: &Lua, this: &Self, _args: ()) -> LuaResult<i32> {
+    fn get_type(_lua: &Lua, this: &Self, _args: ()) -> LuaResult<i32> {
         return Ok(match this.evt {
             NetClientPeerEvent::Connected => Self::CONNECTED,
             NetClientPeerEvent::Disconnected => Self::DISCONNECTED,
@@ -199,7 +199,7 @@ impl LuaNetClientPeerEvent {
         });
     }
 
-    fn lua_get_data(lua: &Lua, this: &Self, _args: ()) -> LuaResult<Option<LuaString>> {
+    fn get_data(lua: &Lua, this: &Self, _args: ()) -> LuaResult<Option<LuaString>> {
         let NetClientPeerEvent::PacketReceived { data } = &this.evt else {
             return Ok(None);
         };
@@ -210,7 +210,7 @@ impl LuaNetClientPeerEvent {
 
 impl LuaUserData for LuaNetClientPeerEvent {
     fn add_methods<M: LuaUserDataMethods<Self>>(methods: &mut M) {
-        methods.add_method("get_type", Self::lua_get_type);
-        methods.add_method("get_data", Self::lua_get_data);
+        methods.add_method("get_type", Self::get_type);
+        methods.add_method("get_data", Self::get_data);
     }
 }

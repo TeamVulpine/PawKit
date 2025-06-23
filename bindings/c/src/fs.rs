@@ -4,7 +4,8 @@ use pawkit_fs::{Vfs, VfsBuffer, VfsError, VfsListUtils};
 use zip::result::ZipError;
 
 use crate::{
-    c_enum, cstr_to_str, disown_str_to_cstr, drop_from_heap, move_slice_to_heap, move_to_heap, move_to_stack, ptr_to_ref, ptr_to_ref_mut, ptr_to_slice, ptr_to_slice_mut, set_if_valid
+    c_enum, cstr_to_str, disown_str_to_cstr, drop_from_heap, move_slice_to_heap, move_to_heap,
+    move_to_stack, ptr_to_ref, ptr_to_ref_mut, ptr_to_slice, ptr_to_slice_mut, set_if_valid,
 };
 
 type CVfs = *mut Vfs;
@@ -26,8 +27,8 @@ fn vfs_error_to_c(error: VfsError) -> CVfsError {
         VfsError::IoError(_) | VfsError::ZipError(ZipError::Io(_)) => ERROR_IO,
         VfsError::NotFound | VfsError::ZipError(ZipError::FileNotFound) => ERROR_NOT_FOUND,
         VfsError::ZipError(_) => ERROR_ZIP,
-        _ => ERROR_OTHER
-    }
+        _ => ERROR_OTHER,
+    };
 }
 
 unsafe fn ok(error: *mut CVfsError) {
@@ -76,7 +77,11 @@ unsafe extern "C" fn pawkit_vfs_working(error: *mut CVfsError) -> CVfs {
 }
 
 #[no_mangle]
-unsafe extern "C" fn pawkit_vfs_subdirectory(vfs: CVfs, subdirectory: *const c_char, error: *mut CVfsError) -> CVfs {
+unsafe extern "C" fn pawkit_vfs_subdirectory(
+    vfs: CVfs,
+    subdirectory: *const c_char,
+    error: *mut CVfsError,
+) -> CVfs {
     let Some(vfs) = ptr_to_ref(vfs) else {
         set_if_valid(error, ERROR_INVALID_PTR);
 
@@ -119,7 +124,11 @@ unsafe extern "C" fn pawkit_vfs_buffer_destroy(buf: CVfsBuffer) {
 }
 
 #[no_mangle]
-unsafe extern "C" fn pawkit_vfs_open(vfs: CVfs, path: *const c_char, error: *mut CVfsError) -> CVfsBuffer {
+unsafe extern "C" fn pawkit_vfs_open(
+    vfs: CVfs,
+    path: *const c_char,
+    error: *mut CVfsError,
+) -> CVfsBuffer {
     let Some(vfs) = ptr_to_ref(vfs) else {
         set_if_valid(error, ERROR_INVALID_PTR);
 
@@ -142,7 +151,12 @@ unsafe extern "C" fn pawkit_vfs_open(vfs: CVfs, path: *const c_char, error: *mut
 }
 
 #[no_mangle]
-unsafe extern "C" fn pawkit_vfs_buffer_read(buf: CVfsBuffer, data: *mut u8, size: usize, error: *mut CVfsError) -> usize {
+unsafe extern "C" fn pawkit_vfs_buffer_read(
+    buf: CVfsBuffer,
+    data: *mut u8,
+    size: usize,
+    error: *mut CVfsError,
+) -> usize {
     let Some(buf) = ptr_to_ref_mut(buf) else {
         set_if_valid(error, ERROR_INVALID_PTR);
         return 0;
@@ -162,7 +176,7 @@ unsafe extern "C" fn pawkit_vfs_buffer_read(buf: CVfsBuffer, data: *mut u8, size
 unsafe extern "C" fn pawkit_vfs_buffer_read_to_array(
     buf: CVfsBuffer,
     size: *mut usize,
-    error: *mut CVfsError
+    error: *mut CVfsError,
 ) -> *const u8 {
     let Some(buf) = ptr_to_ref_mut(buf) else {
         set_if_valid(error, ERROR_INVALID_PTR);
@@ -185,12 +199,15 @@ unsafe extern "C" fn pawkit_vfs_buffer_read_to_array(
     };
 
     ok(error);
-    
+
     return move_slice_to_heap(&data, size);
 }
 
 #[no_mangle]
-unsafe extern "C" fn pawkit_vfs_buffer_read_to_string(buf: CVfsBuffer, error: *mut CVfsError) -> *const c_char {
+unsafe extern "C" fn pawkit_vfs_buffer_read_to_string(
+    buf: CVfsBuffer,
+    error: *mut CVfsError,
+) -> *const c_char {
     let Some(buf) = ptr_to_ref_mut(buf) else {
         set_if_valid(error, ERROR_INVALID_PTR);
 
@@ -299,7 +316,7 @@ unsafe extern "C" fn pawkit_vfs_list_next(list: CVfsList, error: *mut CVfsError)
     };
 
     let Some(result) = result_to_option(result, error) else {
-        return null_mut()
+        return null_mut();
     };
 
     ok(error);

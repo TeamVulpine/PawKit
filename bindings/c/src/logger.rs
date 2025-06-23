@@ -12,7 +12,7 @@ struct CLoggerCallbacks {
 
 impl LoggerCallbacks for CLoggerCallbacks {
     fn print_to_console(&self, s: &str) {
-        let Some(print) = self.print_to_logfile else {
+        let Some(print) = self.print_to_console else {
             return;
         };
 

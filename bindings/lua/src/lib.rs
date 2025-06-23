@@ -3,6 +3,7 @@
 
 use mlua::prelude::*;
 
+mod fs;
 mod input;
 mod logger;
 mod net;
@@ -45,6 +46,7 @@ pub fn pawkit(lua: &Lua) -> LuaResult<LuaTable> {
     exports.set("logger", logger::init(lua)?)?;
     exports.set("net", net::init(lua)?)?;
     exports.set("input", input::init(lua)?)?;
+    exports.set("fs", fs::init(lua)?)?;
 
     return Ok(exports);
 }

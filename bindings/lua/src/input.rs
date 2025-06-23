@@ -121,6 +121,8 @@ pub(super) fn init(lua: &Lua) -> LuaResult<LuaTable> {
 
     exports.set("families", input_family(lua)?)?;
 
+    exports.set("create_manager", lua.create_function(LuaInputManager::new)?)?;
+
     return Ok(exports);
 }
 
@@ -129,7 +131,13 @@ struct LuaInputManager {
 }
 
 impl LuaInputManager {
-    fn register_digital_binding_lua(
+    fn new(_lua: &Lua, _args: ()) -> LuaResult<Self> {
+        return Ok(Self {
+            manager: InputManager::new(),
+        });
+    }
+
+    fn register_digital_binding(
         lua: &Lua,
         this: &mut Self,
         args: (String, LuaValue),
@@ -143,7 +151,7 @@ impl LuaInputManager {
         return Ok(());
     }
 
-    fn register_analog_binding_lua(
+    fn register_analog_binding(
         lua: &Lua,
         this: &mut Self,
         args: (String, LuaValue),
@@ -157,7 +165,7 @@ impl LuaInputManager {
         return Ok(());
     }
 
-    fn register_vector_binding_lua(
+    fn register_vector_binding(
         lua: &Lua,
         this: &mut Self,
         args: (String, LuaValue),
@@ -171,13 +179,13 @@ impl LuaInputManager {
         return Ok(());
     }
 
-    fn lock_bindings_lua(_lua: &Lua, this: &mut Self, _args: ()) -> LuaResult<()> {
+    fn lock_bindings(_lua: &Lua, this: &mut Self, _args: ()) -> LuaResult<()> {
         this.manager.lock();
 
         return Ok(());
     }
 
-    fn device_connected_lua(lua: &Lua, this: &Self, args: (LuaValue, usize)) -> LuaResult<usize> {
+    fn device_connected(lua: &Lua, this: &Self, args: (LuaValue, usize)) -> LuaResult<usize> {
         let family = lua.from_value(args.0)?;
 
         let id = match family {
@@ -190,7 +198,7 @@ impl LuaInputManager {
         return Ok(id);
     }
 
-    fn device_disconnected_lua(lua: &Lua, this: &Self, args: (LuaValue, usize)) -> LuaResult<()> {
+    fn device_disconnected(lua: &Lua, this: &Self, args: (LuaValue, usize)) -> LuaResult<()> {
         let family = lua.from_value(args.0)?;
 
         match family {
@@ -203,7 +211,7 @@ impl LuaInputManager {
         return Ok(());
     }
 
-    fn set_button_lua(
+    fn set_button(
         lua: &Lua,
         this: &Self,
         args: (LuaValue, usize, LuaValue, bool),
@@ -230,11 +238,7 @@ impl LuaInputManager {
         return Ok(());
     }
 
-    fn set_axis_lua(
-        lua: &Lua,
-        this: &Self,
-        args: (LuaValue, usize, LuaValue, f32),
-    ) -> LuaResult<()> {
+    fn set_axis(lua: &Lua, this: &Self, args: (LuaValue, usize, LuaValue, f32)) -> LuaResult<()> {
         let family = lua.from_value(args.0)?;
 
         let Some(state) = match family {
@@ -261,23 +265,23 @@ impl LuaInputManager {
         return Ok(());
     }
 
-    fn create_handler_lua(_lua: &Lua, this: &Self, _args: ()) -> LuaResult<Option<usize>> {
+    fn create_handler(_lua: &Lua, this: &Self, _args: ()) -> LuaResult<Option<usize>> {
         return Ok(this.manager.create_handler());
     }
 
-    fn destroy_handler_lua(_lua: &Lua, this: &Self, args: (usize,)) -> LuaResult<()> {
+    fn destroy_handler(_lua: &Lua, this: &Self, args: (usize,)) -> LuaResult<()> {
         this.manager.destroy_handler(args.0);
 
         return Ok(());
     }
 
-    fn update_lua(_lua: &Lua, this: &Self, _args: ()) -> LuaResult<()> {
+    fn update(_lua: &Lua, this: &Self, _args: ()) -> LuaResult<()> {
         this.manager.update();
 
         return Ok(());
     }
 
-    fn get_frame_lua(lua: &Lua, this: &Self, args: (usize, String)) -> LuaResult<Option<LuaValue>> {
+    fn get_frame(lua: &Lua, this: &Self, args: (usize, String)) -> LuaResult<Option<LuaValue>> {
         let Some(frame) = this.manager.get_frame(args.0, &args.1) else {
             return Ok(None);
         };
@@ -285,7 +289,7 @@ impl LuaInputManager {
         return Ok(Some(lua.to_value(&frame)?));
     }
 
-    fn connect_device_to_handler_lua(
+    fn connect_device_to_handler(
         lua: &Lua,
         this: &Self,
         args: (usize, LuaValue, usize),
@@ -298,7 +302,7 @@ impl LuaInputManager {
         return Ok(());
     }
 
-    fn disconnect_device_from_handler_lua(
+    fn disconnect_device_from_handler(
         lua: &Lua,
         this: &Self,
         args: (usize, LuaValue, usize),
@@ -314,33 +318,27 @@ impl LuaInputManager {
 
 impl LuaUserData for LuaInputManager {
     fn add_methods<M: LuaUserDataMethods<Self>>(methods: &mut M) {
-        methods.add_method_mut(
-            "register_digital_binding",
-            Self::register_digital_binding_lua,
-        );
-        methods.add_method_mut("register_analog_binding", Self::register_analog_binding_lua);
-        methods.add_method_mut("register_vector_binding", Self::register_vector_binding_lua);
-        methods.add_method_mut("lock_bindings", Self::lock_bindings_lua);
+        methods.add_method_mut("register_digital_binding", Self::register_digital_binding);
+        methods.add_method_mut("register_analog_binding", Self::register_analog_binding);
+        methods.add_method_mut("register_vector_binding", Self::register_vector_binding);
+        methods.add_method_mut("lock_bindings", Self::lock_bindings);
 
-        methods.add_method("device_connected", Self::device_connected_lua);
-        methods.add_method("device_disconnected", Self::device_disconnected_lua);
+        methods.add_method("device_connected", Self::device_connected);
+        methods.add_method("device_disconnected", Self::device_disconnected);
 
-        methods.add_method("set_button", Self::set_button_lua);
-        methods.add_method("set_axis", Self::set_axis_lua);
+        methods.add_method("set_button", Self::set_button);
+        methods.add_method("set_axis", Self::set_axis);
 
-        methods.add_method("create_handler", Self::create_handler_lua);
-        methods.add_method("destroy_handler", Self::destroy_handler_lua);
+        methods.add_method("create_handler", Self::create_handler);
+        methods.add_method("destroy_handler", Self::destroy_handler);
 
-        methods.add_method("update", Self::update_lua);
-        methods.add_method("get_frame", Self::get_frame_lua);
+        methods.add_method("update", Self::update);
+        methods.add_method("get_frame", Self::get_frame);
 
-        methods.add_method(
-            "connect_device_to_handler",
-            Self::connect_device_to_handler_lua,
-        );
+        methods.add_method("connect_device_to_handler", Self::connect_device_to_handler);
         methods.add_method(
             "disconnect_device_from_handler",
-            Self::disconnect_device_from_handler_lua,
+            Self::disconnect_device_from_handler,
         );
     }
 }
