@@ -25,9 +25,6 @@ void pawkit_logger_fatal(char const *message);
 #ifdef __cplusplus
 }
 
-#include <string>
-
-#if __cplusplus >= 202002L
 #include <format>
 
 #define LOGFUNC(cppname, cname) \
@@ -36,15 +33,6 @@ void pawkit_logger_fatal(char const *message);
         std::string formatted = std::format(fmt, args...); \
         pawkit_logger_##cname(formatted.c_str()); \
     }
-
-#else
-
-#define LOGFUNC(cppname, cname) \
-    inline void cppname(std::string &message) { \
-        pawkit_logger_##cname(message.c_str()); \
-    }
-
-#endif
 
 namespace PawKit::Logger {
     using LoggerCallbacks = pawkit_logger_callbacks;

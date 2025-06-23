@@ -158,6 +158,14 @@ unsafe fn drop_slice_from_heap<T>(ptr: *mut T, size: usize) {
     drop(Box::from_raw(slice));
 }
 
+unsafe fn set_if_valid<T>(ptr: *mut T, value: T) {
+    let Some(ptr) = ptr_to_ref_mut(ptr) else {
+        return;
+    };
+
+    *ptr = value;
+}
+
 #[no_mangle]
 unsafe extern "C" fn pawkit_free_string(str: *const c_char) {
     drop_cstr(str);

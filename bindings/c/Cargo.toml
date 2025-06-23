@@ -20,3 +20,4 @@ pawkit-fs.workspace = true
 
 serde.workspace = true
 num_enum.workspace = true
+zip.workspace = true
