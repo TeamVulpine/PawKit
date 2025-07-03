@@ -1,0 +1,19 @@
+[package]
+name = "pawkit-godot"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+pawkit-logger.workspace = true
+pawkit-net.workspace = true
+pawkit-net-signaling.workspace = true
+pawkit-input.workspace = true
+pawkit-fs.workspace = true
+
+serde.workspace = true
+tokio.workspace = true
+
+godot.workspace = true

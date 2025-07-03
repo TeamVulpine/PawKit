@@ -1,0 +1,14 @@
+[configuration]
+entry_symbol = "gdext_rust_init"
+compatibility_minimum = 4.4
+reloadable = true
+
+[libraries]
+linux.release.x86_64   = "res://pawkit/release/libpawkit_godot.so"
+windows.release.x86_64 = "res://pawkit/release/pawkit_godot.dll"
+macos.release          = "res://pawkit/release/libpawkit_godot.dylib"
+macos.release.arm64    = "res://pawkit/release/libpawkit_godot.dylib"
+linux.debug.x86_64     = "res://pawkit/debug/libpawkit_godot.so"
+windows.debug.x86_64   = "res://pawkit/debug/pawkit_godot.dll"
+macos.debug            = "res://pawkit/debug/libpawkit_godot.dylib"
+macos.debug.arm64      = "res://pawkit/debug/libpawkit_godot.dylib"

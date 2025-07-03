@@ -10,11 +10,12 @@ members = [
   "fs",
   "crockford",
   "holy-array",
-  "bindings/c",
-  "bindings/lua",
   "futures",
   "input",
-  "bitarray"
+  "bitarray",
+  "bindings/c",
+  "bindings/lua",
+  "bindings/godot",
 ]
 
 [workspace.dependencies]
@@ -67,9 +68,11 @@ bytes = "1.10.1"
 reqwest = "0.12.15"
 zip = "4.1.0"
 
+godot.version = "0.3.1"
+godot.features = ["api-4-4", "serde"]
+
 tokio-tungstenite.version = "0.26.2"
 tokio-tungstenite.features = ["native-tls"]
-
 
 web-sys.version = "0.3.77"
 web-sys.features = [
