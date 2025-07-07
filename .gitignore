@@ -2,3 +2,4 @@
 Cargo.lock
 logs/
 compile_flags.txt
+build/
