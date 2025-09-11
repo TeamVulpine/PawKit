@@ -25,6 +25,11 @@ impl PawkitNetHostPeer {
     }
 
     #[func]
+    fn host_id(&self) -> GString {
+        return self.peer.get_host_id().to_string().into();
+    }
+
+    #[func]
     fn send_packet(&self, client_id: i64, data: PackedByteArray) {
         self.peer.send_packet(client_id as usize, data.as_slice());
     }

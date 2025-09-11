@@ -53,28 +53,28 @@ pawkit-input.path = "./input"
 pawkit-input.version = "0.1.2"
 
 tokio-native-tls = "0.3.1"
-num_enum = "0.7.3"
+num_enum = "0.7.4"
 serde.version = "1.0.219"
 serde.features = ["serde_derive"]
 just-webrtc = "0.2.0"
-wasm-bindgen = "0.2.100"
-wasm-bindgen-futures = "0.4.50"
+wasm-bindgen = "0.2.101"
+wasm-bindgen-futures = "0.4.51"
 futures-util = "0.3.31"
-chrono = "0.4.41"
-serde_json = "1.0.140"
+chrono = "0.4.42"
+serde_json = "1.0.143"
 ciborium = "0.2.2"
-anyhow = "1.0.98"
+anyhow = "1.0.99"
 bytes = "1.10.1"
-reqwest = "0.12.15"
-zip = "4.1.0"
+reqwest = "0.12.23"
+zip = "5.1.0"
 
-godot.version = "0.3.1"
+godot.version = "0.3.5"
 godot.features = ["api-4-4", "serde"]
 
-tokio-tungstenite.version = "0.26.2"
+tokio-tungstenite.version = "0.27.0"
 tokio-tungstenite.features = ["native-tls"]
 
-web-sys.version = "0.3.77"
+web-sys.version = "0.3.78"
 web-sys.features = [
   "BinaryType",
   "Blob",
@@ -94,8 +94,8 @@ web-sys.features = [
   "Response"
 ]
 
-tokio.version = "1.45.0"
+tokio.version = "1.47.1"
 tokio.features = ["sync", "rt", "macros"]
 
-mlua.version = "0.10.5"
+mlua.version = "0.11.3"
 mlua.features = ["lua54", "module", "serialize"] 
