@@ -7,7 +7,7 @@ set(_PAWKIT_DYNAMIC_LIBNAME "libpawkit.so")
 
 if(WIN32)
     set(_PAWKIT_STATIC_LIBNAME "pawkit.lib")
-    set(_PAWKIT_DYNAMIC_LIBNAME "pawkit.dll")
+    set(_PAWKIT_DYNAMIC_LIBNAME "pawkit.dll.lib")
 endif()
 
 set(PAWKIT_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/bindings/c/include")
