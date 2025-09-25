@@ -7,7 +7,7 @@ set(_PAWKIT_DYNAMIC_LIBNAME "libpawkit.so")
 
 if(WIN32)
     set(_PAWKIT_STATIC_LIBNAME "pawkit.lib")
-    set(_PAWKIT_DYNAMIC_LIBNAME "pawkit.dll.lib")
+    set(_PAWKIT_DYNAMIC_LIBNAME "pawkit.dll")
 endif()
 
 set(PAWKIT_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/bindings/c/include")
@@ -73,3 +73,9 @@ set_target_properties(pawkit::dynamic PROPERTIES
     IMPORTED_LOCATION "${PAWKIT_DYNAMIC_LIB}"
     INTERFACE_INCLUDE_DIRECTORIES ${PAWKIT_INCLUDE}
 )
+
+if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    set_target_properties(pawkit::dynamic PROPERTIES
+        IMPORTED_IMPLIB "${PAWKIT_DYNAMIC_LIB}.lib"
+    )
+endif()
