@@ -199,6 +199,26 @@ namespace PawKit {
         return str;
     }
 
+    template <typename TError, typename TResult, bool TOwned = true, Callable<char const *, TError &> TFunc>
+    TResult GetStringErr(TFunc func) {
+        TError err = TError();
+
+        char const* rawStr = func(err);
+
+        if (err)
+            return err;
+
+        if (!rawStr)
+            return "";
+
+        StrReturnType<TOwned> str = rawStr;
+
+        if constexpr (TOwned)
+            pawkit_free_string(rawStr);
+
+        return str;
+    }
+
     template <bool TOwned = true, Callable<char const *> TFunc>
     std::optional<StrReturnType<TOwned>> GetStringOptional(TFunc func) {
         char const* rawStr = func();
@@ -236,6 +256,26 @@ namespace PawKit {
         return Output(std::in_place_index<0>, str);
     }
 
+    template <typename TError, typename TResult, bool TOwned = true, Callable<char const *, TError &> TFunc>
+    TResult GetStringErrOptional(TFunc func) {
+        TError err = TError();
+
+        char const* rawStr = func(err);
+
+        if (err)
+            return TResult(err);
+
+        if (!rawStr)
+            return TResult(std::nullopt);
+
+        StrReturnType<TOwned> str = rawStr;
+
+        if constexpr (TOwned)
+            pawkit_free_string(rawStr);
+
+        return TResult(std::optional(str));
+    }
+
     template <bool TOwned = true, Callable<pawkit_u8 const *, pawkit_usize &> TFunc>
     BufReturnType<TOwned> GetBuf(TFunc func) {
         pawkit_usize size = 0;
@@ -254,6 +294,27 @@ namespace PawKit {
 
     template <typename TError, bool TOwned = true, Callable<pawkit_u8 const *, pawkit_usize &, TError &> TFunc>
     std::variant<BufReturnType<TOwned>, TError> GetBufErr(TFunc func) {
+        pawkit_usize size = 0;
+        TError error = TError();
+
+        pawkit_u8 const *data = func(size, error);
+
+        if (error)
+            return error;
+
+        if (!data || size == 0)
+            return BufReturnType<true>{};
+
+        BufReturnType<TOwned> buf {data, data + size};
+
+        if constexpr (TOwned) 
+            pawkit_free_array(data);
+        
+        return buf;
+    }
+
+    template <typename TError, typename TResult, bool TOwned = true, Callable<pawkit_u8 const *, pawkit_usize &, TError &> TFunc>
+    TResult GetBufErr(TFunc func) {
         pawkit_usize size = 0;
         TError error = TError();
 
