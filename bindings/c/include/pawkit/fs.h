@@ -2,6 +2,7 @@
 
 #include "assert.h"
 #include "util.h"
+#include <type_traits>
 #include <utility>
 
 #ifdef __cplusplus
@@ -73,6 +74,7 @@ namespace PawKit::Vfs {
         std::optional<T> ok {std::nullopt};
 
         template <typename ...TParams>
+            requires std::is_constructible_v<T, TParams...>
         Result(TParams &&...params) : ok(std::forward<TParams>(params)...) {}
         Result(pawkit_vfs_error_t error) : err(error) {}
 
