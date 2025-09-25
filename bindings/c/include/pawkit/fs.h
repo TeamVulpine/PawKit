@@ -71,26 +71,86 @@ namespace PawKit::Vfs {
     template <typename T>
     struct Result final {
         pawkit_vfs_error_t err {0};
-        std::optional<T> ok {std::nullopt};
+        union {
+            T value;
+        };
 
         template <typename ...TParams>
             requires std::is_constructible_v<T, TParams...>
-        Result(TParams &&...params) : ok(std::forward<TParams>(params)...) {}
+        Result(TParams &&...params) : value(std::forward<TParams>(params)...) {}
         Result(pawkit_vfs_error_t error) : err(error) {}
+        ~Result() {
+            if (err)
+                value.~T();
+        }
+
+        Result(Result const &other)
+            requires std::is_copy_constructible_v<T> :
+            err(other.err)
+        {
+            if (!err)
+                new(&value) T(other.value);
+        }
+
+        Result(Result &&other)
+            requires std::is_move_constructible_v<T> :
+            err(other.err)
+        {
+            if (!err)
+                new(&value) T(std::move(other.value));
+        }
+
+        Result& operator=(Result const &other)
+            requires std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T>
+        {
+            if (this == &other)
+                return *this;
+
+            if (!err)
+                value.~T();
+
+            err = other.err;
+            if (!err)
+                new(&value) T(other.value);
+
+            return *this;
+        }
+
+        Result& operator=(Result &&other)
+            requires std::is_move_constructible_v<T> && std::is_move_assignable_v<T>
+        {
+            if (this == &other)
+                return *this;
+
+            if (!err) 
+                value.~T();
+
+            err = other.err;
+            if (!err)
+                new(&value) T(std::move(other.value));
+
+            return *this;
+        }
 
         bool IsOk() {
-            return ok.has_value();
+            return !err;
         }
 
         bool IsErr() {
-            return !IsOk();
+            return err;
         }
 
         T &Unwrap() {
-            return *ok;
+            if (IsErr())
+                throw err;
+
+            return value;
         }
 
         pawkit_vfs_error_t UnwrapErr() {
+            if (IsOk())
+                throw err;
+            
             return err;
         }
     };
