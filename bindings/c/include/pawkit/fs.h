@@ -140,8 +140,8 @@ namespace PawKit::Vfs {
 
             Iterator() = default;
 
-            std::optional<Result<std::string>> const &operator*() const {
-                return current;
+            Result<std::string> const &operator*() const {
+                return *current;
             }
 
             Iterator &operator++() {
