@@ -68,11 +68,11 @@ void pawkit_vfs_list_destroy(pawkit_vfs_list_t list);
 namespace PawKit::Vfs {
     template <typename T>
     struct Result final {
-        pawkit_vfs_error_t err;
-        std::optional<T> ok;
+        pawkit_vfs_error_t err {0};
+        std::optional<T> ok {std::nullopt};
 
-        Result(T ok) : err(0), ok(ok) {}
-        Result(pawkit_vfs_error_t err) : err(err), ok(std::nullopt) {}
+        Result(T ok) : ok(ok) {}
+        Result(pawkit_vfs_error_t err) : err(err) {}
 
         bool IsOk() {
             return ok.has_value();
@@ -215,9 +215,9 @@ namespace PawKit::Vfs {
             pawkit_vfs_t vfs = pawkit_vfs_working(&error);
 
             if (error)
-                return error;
+                return Result<Filesystem>(error);
 
-            return Filesystem(vfs);
+            return Result<Filesystem>(Filesystem(vfs));
         }
 
         /// Creates a virtual filesystem from the contents of a zip file
@@ -227,9 +227,9 @@ namespace PawKit::Vfs {
             pawkit_vfs_t vfs = pawkit_vfs_zip(buffer.Get(), &error);
 
             if (error)
-                return error;
+                return Result<Filesystem>(error);
 
-            return Filesystem(vfs);
+            return Result<Filesystem>(Filesystem(vfs));
         }
 
         /// Gets a subdirectory of the filesystem as a new filesystem
@@ -239,9 +239,9 @@ namespace PawKit::Vfs {
             pawkit_vfs_t vfs = pawkit_vfs_subdirectory(Get(), path.c_str(), &error);
 
             if (error)
-                return error;
+                return Result<Filesystem>(error);
 
-            return Filesystem(vfs);
+            return Result<Filesystem>(Filesystem(vfs));
         }
 
         /// Lists all the top-level subdirectories of the filesystem
@@ -251,7 +251,7 @@ namespace PawKit::Vfs {
             pawkit_vfs_list_t list = pawkit_vfs_list_subdirectories(Get(),  &error);
 
             if (error)
-                return error;
+                return Result<List>(error);
 
             return Result(List(list));
         }
@@ -263,7 +263,7 @@ namespace PawKit::Vfs {
             pawkit_vfs_list_t list = pawkit_vfs_list_files(Get(),  &error);
 
             if (error)
-                return error;
+                return Result<List>(error);
 
             return Result(List(list));
         }
@@ -275,7 +275,7 @@ namespace PawKit::Vfs {
             pawkit_vfs_list_t list = pawkit_vfs_list_files_recursive(Get(),  &error);
 
             if (error)
-                return error;
+                return Result<List>(error);
 
             return Result(List(list));
         }
@@ -287,7 +287,7 @@ namespace PawKit::Vfs {
             pawkit_vfs_buffer_t buf = pawkit_vfs_open(Get(), path.c_str(), &error);
             
             if (error)
-                return error;
+                return Result<Buffer>(error);
 
             return Result(Buffer(buf));
         }
