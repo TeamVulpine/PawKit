@@ -41,7 +41,6 @@ void pawkit_free_array(pawkit_u8 const *buf);
 
 #include <memory>
 #include <concepts>
-#include <functional>
 #include <string>
 #include <vector>
 #include <span>
@@ -89,7 +88,7 @@ namespace PawKit {
         std::shared_ptr<void> ptr;
 
         public:
-        inline OpaqueShared(Ptr ptr, std::function<void (Ptr)> destruct) : ptr(ptr, destruct) {}
+        inline OpaqueShared(Ptr ptr, void (*destruct)(void *)) : ptr(ptr, destruct) {}
         virtual ~OpaqueShared() = default;
 
         inline operator Ptr () {
@@ -117,7 +116,7 @@ namespace PawKit {
         std::unique_ptr<void, void(*)(T)> ptr;
 
         public:
-        inline OpaqueUnique(Ptr ptr, std::function<void (Ptr)> destruct) : ptr(ptr, destruct) {}
+        inline OpaqueUnique(Ptr ptr, void (*destruct)(void *)) : ptr(ptr, destruct) {}
         virtual ~OpaqueUnique() = default;
 
         inline operator Ptr () {
