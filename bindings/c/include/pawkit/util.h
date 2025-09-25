@@ -1,11 +1,7 @@
 #pragma once
 
-#if defined(_MSC_VER)
-#define PAWKIT_CDECL __cdecl
-#elif defined(__GNUC__) || defined(__clang__)
-#define PAWKIT_CDECL __attribute__((__cdecl__))
-#else
-#define PAWKIT_CDECL
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 #include <stdint.h>
@@ -33,6 +29,7 @@ void pawkit_free_string(char const *str);
 void pawkit_free_array(pawkit_u8 const *buf);
 
 #ifdef __cplusplus
+}
 
 #include <memory>
 #include <concepts>
