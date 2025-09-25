@@ -2,6 +2,7 @@
 
 #include "assert.h"
 #include "util.h"
+#include <utility>
 
 #ifdef __cplusplus
 extern "C" {
@@ -71,8 +72,9 @@ namespace PawKit::Vfs {
         pawkit_vfs_error_t err {0};
         std::optional<T> ok {std::nullopt};
 
-        Result(T ok) : ok(ok) {}
-        Result(pawkit_vfs_error_t err) : err(err) {}
+        template <typename ...TParams>
+        Result(TParams &&...params) : ok(std::forward<TParams>(params)...) {}
+        Result(pawkit_vfs_error_t error) : err(error) {}
 
         bool IsOk() {
             return ok.has_value();
@@ -137,8 +139,8 @@ namespace PawKit::Vfs {
     };
 
     /// Represents a "list" operation for the VFS
-    struct List : OpaqueShared<pawkit_vfs_list_t> {
-        List(pawkit_vfs_list_t list) : OpaqueShared(list, pawkit_vfs_list_destroy) {}
+    struct List : OpaqueUnique<pawkit_vfs_list_t> {
+        List(pawkit_vfs_list_t list) : OpaqueUnique(list, pawkit_vfs_list_destroy) {}
 
         /// Gets the next file in the list
         Result<std::optional<std::string>> Next() {
@@ -148,8 +150,10 @@ namespace PawKit::Vfs {
         }
 
         /// Only look for files with a given extension
-        List WithExtension(std::string const &ext) {
-            return pawkit_vfs_list_with_extension(Get(), ext.c_str());
+        List &WithExtension(std::string const &ext) {
+            Reset(pawkit_vfs_list_with_extension(Release(), ext.c_str()));
+            
+            return *this;
         }
 
         struct Iterator {
@@ -182,7 +186,7 @@ namespace PawKit::Vfs {
                         current = std::nullopt;
                         list = nullptr;
                     } else {
-                        current = Result<std::string>(*opt);
+                        current = Result<std::string>(std::string(*opt));
                     }
                 }
 
@@ -253,7 +257,7 @@ namespace PawKit::Vfs {
             if (error)
                 return Result<List>(error);
 
-            return Result(List(list));
+            return Result<List>(list);
         }
 
         /// Lists all the top-level files of the filesystem
@@ -265,7 +269,7 @@ namespace PawKit::Vfs {
             if (error)
                 return Result<List>(error);
 
-            return Result(List(list));
+            return Result<List>(list);
         }
 
         /// Lists all the files of the filesystem recursively
@@ -277,7 +281,7 @@ namespace PawKit::Vfs {
             if (error)
                 return Result<List>(error);
 
-            return Result(List(list));
+            return Result<List>(list);
         }
 
         /// Opens the file at the given path
@@ -289,7 +293,7 @@ namespace PawKit::Vfs {
             if (error)
                 return Result<Buffer>(error);
 
-            return Result(Buffer(buf));
+            return Result<Buffer>(buf);
         }
     };
 }
