@@ -206,17 +206,17 @@ namespace PawKit {
         char const* rawStr = func(err);
 
         if (err)
-            return err;
+            return TResult(err);
 
         if (!rawStr)
-            return "";
+            return TResult("");
 
         StrReturnType<TOwned> str = rawStr;
 
         if constexpr (TOwned)
             pawkit_free_string(rawStr);
 
-        return str;
+        return TResult(str);
     }
 
     template <bool TOwned = true, Callable<char const *> TFunc>
@@ -321,7 +321,7 @@ namespace PawKit {
         pawkit_u8 const *data = func(size, error);
 
         if (error)
-            return error;
+            return TResult(error);
 
         if (!data || size == 0)
             return BufReturnType<true>{};
@@ -331,7 +331,7 @@ namespace PawKit {
         if constexpr (TOwned) 
             pawkit_free_array(data);
         
-        return buf;
+        return TResult(buf);
     }
 
     template <typename T, Callable<bool, T &> TFunc>
