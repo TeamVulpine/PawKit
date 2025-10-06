@@ -5,7 +5,7 @@ use std::{
 
 use zip::ZipArchive;
 
-use crate::{buffer::VfsBuffer, VfsError};
+use crate::{VfsError, buffer::VfsBuffer};
 
 pub enum VfsListFiles {
     Working(ReadDir),

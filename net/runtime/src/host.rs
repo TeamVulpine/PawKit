@@ -2,15 +2,15 @@ use std::{
     ops::Deref,
     pin::Pin,
     sync::{
-        atomic::{AtomicBool, Ordering},
         Arc,
+        atomic::{AtomicBool, Ordering},
     },
 };
 
 use bytes::Bytes;
-use futures_util::{stream::FuturesUnordered, StreamExt};
+use futures_util::{StreamExt, stream::FuturesUnordered};
 use just_webrtc::{
-    types::PeerConnectionState, DataChannelExt, PeerConnectionExt, SimpleRemotePeerConnection,
+    DataChannelExt, PeerConnectionExt, SimpleRemotePeerConnection, types::PeerConnectionState,
 };
 use pawkit_holy_array::HolyArray;
 use pawkit_net_signaling::{
@@ -18,11 +18,11 @@ use pawkit_net_signaling::{
     model::HostId,
 };
 use tokio::sync::{
-    mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
     RwLock,
+    mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel},
 };
 
-use crate::{recieve_packet, Connection, PacketFuture};
+use crate::{Connection, PacketFuture, recieve_packet};
 
 pub struct NetHostPeer {
     connected_clients: RwLock<HolyArray<Arc<Connection>>>,

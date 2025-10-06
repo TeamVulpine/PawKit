@@ -40,68 +40,82 @@ impl LoggerCallbacks for CLoggerCallbacks {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 unsafe extern "C" fn pawkit_logger_set_logger_callbacks(callback: CLoggerCallbacks) {
     pawkit_logger::set_logger_callbacks(Box::new(callback));
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 unsafe extern "C" fn pawkit_logger_reset_logger_callbacks() {
     pawkit_logger::set_logger_callbacks(Box::new(DefaultLoggerCallbacks));
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 unsafe extern "C" fn pawkit_logger_print_to_console(message: *const c_char) {
-    let Some(message) = cstr_to_str(message) else {
-        return;
-    };
-    pawkit_logger::print_to_console(message);
+    unsafe {
+        let Some(message) = cstr_to_str(message) else {
+            return;
+        };
+        pawkit_logger::print_to_console(message);
+    }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 unsafe extern "C" fn pawkit_logger_print_to_logfile(message: *const c_char) {
-    let Some(message) = cstr_to_str(message) else {
-        return;
-    };
-    pawkit_logger::print_to_logfile(message);
+    unsafe {
+        let Some(message) = cstr_to_str(message) else {
+            return;
+        };
+        pawkit_logger::print_to_logfile(message);
+    }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 unsafe extern "C" fn pawkit_logger_info(message: *const c_char) {
-    let Some(message) = cstr_to_str(message) else {
-        return;
-    };
-    pawkit_logger::info(message);
+    unsafe {
+        let Some(message) = cstr_to_str(message) else {
+            return;
+        };
+        pawkit_logger::info(message);
+    }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 unsafe extern "C" fn pawkit_logger_debug(message: *const c_char) {
-    let Some(message) = cstr_to_str(message) else {
-        return;
-    };
-    pawkit_logger::debug(message);
+    unsafe {
+        let Some(message) = cstr_to_str(message) else {
+            return;
+        };
+        pawkit_logger::debug(message);
+    }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 unsafe extern "C" fn pawkit_logger_warn(message: *const c_char) {
-    let Some(message) = cstr_to_str(message) else {
-        return;
-    };
-    pawkit_logger::warn(message);
+    unsafe {
+        let Some(message) = cstr_to_str(message) else {
+            return;
+        };
+        pawkit_logger::warn(message);
+    }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 unsafe extern "C" fn pawkit_logger_error(message: *const c_char) {
-    let Some(message) = cstr_to_str(message) else {
-        return;
-    };
-    pawkit_logger::error(message);
+    unsafe {
+        let Some(message) = cstr_to_str(message) else {
+            return;
+        };
+        pawkit_logger::error(message);
+    }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 unsafe extern "C" fn pawkit_logger_fatal(message: *const c_char) {
-    let Some(message) = cstr_to_str(message) else {
-        return;
-    };
-    pawkit_logger::fatal(message);
+    unsafe {
+        let Some(message) = cstr_to_str(message) else {
+            return;
+        };
+        pawkit_logger::fatal(message);
+    }
 }

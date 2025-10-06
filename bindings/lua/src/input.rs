@@ -1,11 +1,11 @@
 use mlua::prelude::*;
 use pawkit_input::{
+    InputManager,
     bindings::{
         axis::{GamepadAxis, MouseAxis},
         button::{GamepadButton, KeyboardButton, MouseButton},
     },
     manager::InputFamily,
-    InputManager,
 };
 
 use crate::lua_enum;
@@ -254,7 +254,7 @@ impl LuaInputManager {
             InputFamily::Keyboard => {
                 return Err(LuaError::RuntimeError(
                     "Keyboard does not have any axes".into(),
-                ))
+                ));
             }
             InputFamily::Mouse => lua.from_value::<MouseAxis>(args.2)? as usize,
             InputFamily::Gamepad => lua.from_value::<GamepadAxis>(args.2)? as usize,

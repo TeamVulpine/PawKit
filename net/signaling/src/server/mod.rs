@@ -14,21 +14,21 @@ use tokio::{
     io::AsyncReadExt,
     net::{TcpListener, TcpStream},
     sync::{
-        mpsc::{self, UnboundedSender},
         RwLock,
+        mpsc::{self, UnboundedSender},
     },
     time::sleep,
 };
 use tokio_native_tls::{
-    native_tls::{self, Identity},
     TlsAcceptor,
+    native_tls::{self, Identity},
 };
-use tokio_tungstenite::{accept_async, MaybeTlsStream};
+use tokio_tungstenite::{MaybeTlsStream, accept_async};
 
 use crate::model::{
-    c2s::{client_peer::ClientPeerMessageC2S, host_peer::HostPeerMessageC2S, SignalMessageC2S},
-    s2c::{client_peer::ClientPeerMessageS2C, host_peer::HostPeerMessageS2C, SignalMessageS2C},
     HostId, SignalingError,
+    c2s::{SignalMessageC2S, client_peer::ClientPeerMessageC2S, host_peer::HostPeerMessageC2S},
+    s2c::{SignalMessageS2C, client_peer::ClientPeerMessageS2C, host_peer::HostPeerMessageS2C},
 };
 
 pub mod socket;
@@ -100,7 +100,7 @@ impl SimpleSignalingServer {
         let mut peers = self.host_peers.write().await;
 
         let lobby = loop {
-            let lobby_id = random::<u32>();
+            let lobby_id = random::<u32>(..);
 
             let lobby = PackedGameLobby { game_id, lobby_id };
 

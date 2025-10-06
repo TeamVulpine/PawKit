@@ -1,6 +1,6 @@
 use std::{
-    fs::{create_dir_all, File, OpenOptions},
-    io::{stdout, BufWriter, Write},
+    fs::{File, OpenOptions, create_dir_all},
+    io::{BufWriter, Write, stdout},
     path::PathBuf,
     sync::{LazyLock, Mutex},
 };

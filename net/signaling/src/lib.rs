@@ -1,4 +1,4 @@
-#![feature(random, let_chains)]
+#![feature(random)]
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod server;

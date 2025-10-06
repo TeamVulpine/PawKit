@@ -1,22 +1,22 @@
 use std::{
     ops::Deref,
     sync::{
-        atomic::{AtomicBool, Ordering},
         Arc,
+        atomic::{AtomicBool, Ordering},
     },
 };
 
 use bytes::Bytes;
 use just_webrtc::{
-    types::PeerConnectionState, DataChannelExt, PeerConnectionExt, SimpleLocalPeerConnection,
+    DataChannelExt, PeerConnectionExt, SimpleLocalPeerConnection, types::PeerConnectionState,
 };
 use pawkit_net_signaling::{client::ClientPeerSignalingClient, model::HostId};
 use tokio::sync::{
-    mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
     RwLock,
+    mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel},
 };
 
-use crate::{recieve_packet, Connection};
+use crate::{Connection, recieve_packet};
 
 pub struct NetClientPeer {
     connection: RwLock<Option<Connection>>,

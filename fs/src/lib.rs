@@ -1,5 +1,3 @@
-#![feature(let_chains)]
-
 use std::{
     io,
     ops::Deref,
@@ -7,7 +5,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use zip::{result::ZipError, ZipArchive};
+use zip::{ZipArchive, result::ZipError};
 
 mod buffer;
 pub use buffer::*;
@@ -145,7 +143,7 @@ impl Vfs {
                         .map_or("".into(), |it| format!("{}/", it).into()),
                     zip: zip.clone(),
                     seen: std::collections::HashSet::new(),
-                })
+                });
             }
         };
     }
@@ -171,7 +169,7 @@ impl Vfs {
                         .clone()
                         .map_or("".into(), |it| format!("{}/", it).into()),
                     zip: zip.clone(),
-                })
+                });
             }
         };
     }

@@ -1,5 +1,3 @@
-#![feature(let_chains)]
-
 mod client;
 mod host;
 
@@ -8,8 +6,8 @@ use std::future::Future;
 pub use client::*;
 pub use host::*;
 use just_webrtc::{
-    platform::{Channel, PeerConnection},
     DataChannelExt, PeerConnectionExt,
+    platform::{Channel, PeerConnection},
 };
 
 #[cfg(not(target_arch = "wasm32"))]

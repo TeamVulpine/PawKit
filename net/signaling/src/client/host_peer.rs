@@ -2,9 +2,9 @@ use super::socket::ClientSocket;
 use just_webrtc::types::{ICECandidate, SessionDescription};
 
 use crate::model::{
-    c2s::{host_peer::HostPeerMessageC2S, SignalMessageC2S},
-    s2c::{host_peer::HostPeerMessageS2C, SignalMessageS2C},
     HostId,
+    c2s::{SignalMessageC2S, host_peer::HostPeerMessageC2S},
+    s2c::{SignalMessageS2C, host_peer::HostPeerMessageS2C},
 };
 
 pub struct HostPeerSignalingClient {

@@ -1,6 +1,6 @@
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
-use web_sys::{js_sys::Uint8Array, Response, Window};
+use web_sys::{Response, Window, js_sys::Uint8Array};
 
 pub async fn fetch_string(url: &str) -> Option<String> {
     let window: Window = web_sys::window()?;

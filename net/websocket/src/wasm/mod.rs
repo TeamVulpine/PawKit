@@ -6,10 +6,10 @@ use std::{
 };
 
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
-use wasm_bindgen::{convert::FromWasmAbi, prelude::Closure, JsCast};
+use wasm_bindgen::{JsCast, convert::FromWasmAbi, prelude::Closure};
 use web_sys::{
-    js_sys::{ArrayBuffer, JsString, Uint8Array},
     BinaryType, MessageEvent, WebSocket,
+    js_sys::{ArrayBuffer, JsString, Uint8Array},
 };
 
 use crate::{WebsocketError, WebsocketMessage};

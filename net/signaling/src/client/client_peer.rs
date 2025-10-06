@@ -1,9 +1,9 @@
 use just_webrtc::types::{ICECandidate, SessionDescription};
 
 use crate::model::{
-    c2s::{client_peer::ClientPeerMessageC2S, SignalMessageC2S},
-    s2c::{client_peer::ClientPeerMessageS2C, SignalMessageS2C},
     HostId,
+    c2s::{SignalMessageC2S, client_peer::ClientPeerMessageC2S},
+    s2c::{SignalMessageS2C, client_peer::ClientPeerMessageS2C},
 };
 
 use super::socket::ClientSocket;

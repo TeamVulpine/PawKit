@@ -3,8 +3,8 @@ use std::io::Cursor;
 use pawkit_net_websocket::{Websocket, WebsocketMessage};
 
 use crate::{
-    model::{c2s::SignalMessageC2S, s2c::SignalMessageS2C},
     SendMode,
+    model::{c2s::SignalMessageC2S, s2c::SignalMessageS2C},
 };
 
 pub struct ClientSocket {

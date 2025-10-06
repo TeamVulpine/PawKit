@@ -1,6 +1,6 @@
-use futures_util::{stream::FusedStream, SinkExt, StreamExt};
+use futures_util::{SinkExt, StreamExt, stream::FusedStream};
 use tokio::net::TcpStream;
-use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
+use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, connect_async, tungstenite::Message};
 
 use crate::{WebsocketError, WebsocketMessage};
 

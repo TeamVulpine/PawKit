@@ -3,8 +3,8 @@ use std::str::FromStr;
 
 use pawkit_crockford::{FromCrockford, IntoCrockford};
 use serde::{
-    de::{self, Visitor},
     Deserialize, Deserializer, Serialize, Serializer,
+    de::{self, Visitor},
 };
 
 pub mod c2s;
