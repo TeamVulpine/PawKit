@@ -205,7 +205,7 @@ typedef void *pawkit_input_manager_t;
 pawkit_input_manager_t pawkit_input_manager_create();
 void pawkit_input_manager_destroy(pawkit_input_manager_t manager);
 
-bool pawkit_input_manager_register_binding(pawkit_input_manager_t manager, char const *name, pawkit_usize name_len, pawkit_input_binding_type_t type, pawkit_input_binding_t const *binding, pawkit_usize count);
+bool pawkit_input_manager_register_binding(pawkit_input_manager_t manager, char const *name, pawkit_usize name_size, pawkit_input_binding_type_t type, pawkit_input_binding_t const *binding, pawkit_usize count);
 
 void pawkit_input_manager_lock_bindings(pawkit_input_manager_t manager);
 
@@ -256,7 +256,7 @@ typedef struct pawkit_input_frame_t {
     };
 } pawkit_input_frame_t;
 
-bool pawkit_input_manager_get_frame(pawkit_input_manager_t manager, pawkit_usize handler, char const *name, pawkit_usize name_len, pawkit_input_frame_t *frame);
+bool pawkit_input_manager_get_frame(pawkit_input_manager_t manager, pawkit_usize handler, char const *name, pawkit_usize name_size, pawkit_input_frame_t *frame);
 
 void pawkit_input_manager_connect_device_to_handler(pawkit_input_manager_t manager, pawkit_usize handler, pawkit_input_family_t family, pawkit_usize device);
 void pawkit_input_manager_disconnect_device_from_handler(pawkit_input_manager_t manager, pawkit_usize handler, pawkit_input_family_t family, pawkit_usize device);

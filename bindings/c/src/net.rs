@@ -111,7 +111,7 @@ unsafe extern "C" fn pawkit_net_host_event_free(evt: *mut NetHostPeerEvent) {
     }
 }
 
-c_enum!(CHostPeerEventType {
+c_enum!(CHostPeerEventType : u8 {
     HOST_PEER_CONNECTED,
     HOST_PEER_DISCONNECTED,
     HOST_PACKET_RECEIVED,
@@ -124,7 +124,7 @@ unsafe extern "C" fn pawkit_net_host_event_get_type(
 ) -> CHostPeerEventType {
     unsafe {
         if evt.is_null() {
-            return -1;
+            return 255;
         }
 
         return match &*evt {
@@ -241,7 +241,7 @@ unsafe extern "C" fn pawkit_net_client_peer_poll_event(
     }
 }
 
-c_enum!(CClientPeerEventType {
+c_enum!(CClientPeerEventType : u8 {
     CLIENT_CONNECTED,
     CLIENT_DISCONNECTED,
     CLIENT_CONNECTION_FAILED,
@@ -254,7 +254,7 @@ unsafe extern "C" fn pawkit_net_client_event_get_type(
 ) -> CClientPeerEventType {
     unsafe {
         if evt.is_null() {
-            return -1;
+            return 255;
         }
 
         return match &*evt {

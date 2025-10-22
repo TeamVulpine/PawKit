@@ -8,54 +8,58 @@
 extern "C" {
 #endif
 
-typedef void *pawkit_net_host_peer;
+typedef void *pawkit_net_host_peer_t;
 
 typedef void *pawkit_net_host_event;
 
-typedef enum {
+enum {
     PAWKIT_NET_HOST_EVENT_TYPE_PEER_CONNECTED,
     PAWKIT_NET_HOST_EVENT_TYPE_PEER_DISCONNECTED,
     PAWKIT_NET_HOST_EVENT_TYPE_PACKET_RECEIVED,
     PAWKIT_NET_HOST_EVENT_TYPE_HOST_ID_UPDATED,
-} pawkit_net_host_event_type;
+};
 
-pawkit_net_host_peer pawkit_net_host_peer_create(char const *server_url, pawkit_usize server_url_len, pawkit_u32 game_id, bool request_proxy);
-void pawkit_net_host_peer_destroy(pawkit_net_host_peer peer);
+typedef pawkit_u8 pawkit_net_host_event_type_t;
 
-char const *pawkit_net_host_peer_get_host_id(pawkit_net_host_peer peer, pawkit_usize *len);
+pawkit_net_host_peer_t pawkit_net_host_peer_create(char const *server_url, pawkit_usize server_url_size, pawkit_u32 game_id, bool request_proxy);
+void pawkit_net_host_peer_destroy(pawkit_net_host_peer_t peer);
 
-void pawkit_net_host_peer_send_packet(pawkit_net_host_peer peer, pawkit_usize peer_id, pawkit_u8 *data, pawkit_usize size);
+char const *pawkit_net_host_peer_get_host_id(pawkit_net_host_peer_t peer, pawkit_usize *size);
 
-pawkit_net_host_event pawkit_net_host_peer_poll_event(pawkit_net_host_peer peer);
+void pawkit_net_host_peer_send_packet(pawkit_net_host_peer_t peer, pawkit_usize peer_id, pawkit_u8 *data, pawkit_usize size);
+
+pawkit_net_host_event pawkit_net_host_peer_poll_event(pawkit_net_host_peer_t peer);
 void pawkit_net_host_event_free(pawkit_net_host_event evt);
 
-pawkit_net_host_event_type pawkit_net_host_event_get_type(pawkit_net_host_event evt);
+pawkit_net_host_event_type_t pawkit_net_host_event_get_type(pawkit_net_host_event evt);
 pawkit_usize pawkit_net_host_event_get_peer_id(pawkit_net_host_event evt);
 /// Ownership is retained by the event. Can be NULL.
 pawkit_u8 const *pawkit_net_host_event_get_data(pawkit_net_host_event evt, pawkit_usize *size);
 
-typedef void *pawkit_net_client_peer;
+typedef void *pawkit_net_client_peer_t;
 
-typedef void *pawkit_net_client_event;
+typedef void *pawkit_net_client_event_t;
 
-typedef enum {
+enum {
     PAWKIT_NET_CLIENT_EVENT_TYPE_CONNECTED,
     PAWKIT_NET_CLIENT_EVENT_TYPE_DISCONNECTED,
     PAWKIT_NET_CLIENT_EVENT_TYPE_CONNECTION_FAILED,
     PAWKIT_NET_CLIENT_EVENT_TYPE_PACKET_RECEIVED,
-} pawkit_net_client_event_type;
+};
 
-pawkit_net_client_peer pawkit_net_client_peer_create(char const *host_id, pawkit_usize host_id_len, pawkit_u32 game_id);
-void pawkit_net_client_peer_destroy(pawkit_net_client_peer peer);
+typedef pawkit_u8 pawkit_net_client_event_type_t;
 
-void pawkit_net_client_peer_send_packet(pawkit_net_client_peer peer, pawkit_u8 *data, pawkit_usize size);
+pawkit_net_client_peer_t pawkit_net_client_peer_create(char const *host_id, pawkit_usize host_id_size, pawkit_u32 game_id);
+void pawkit_net_client_peer_destroy(pawkit_net_client_peer_t peer);
 
-pawkit_net_client_event pawkit_net_client_peer_poll_event(pawkit_net_client_peer peer);
-void pawkit_net_client_event_free(pawkit_net_client_event evt);
+void pawkit_net_client_peer_send_packet(pawkit_net_client_peer_t peer, pawkit_u8 *data, pawkit_usize size);
 
-pawkit_net_client_event_type pawkit_net_client_event_get_type(pawkit_net_client_event evt);
+pawkit_net_client_event_t pawkit_net_client_peer_poll_event(pawkit_net_client_peer_t peer);
+void pawkit_net_client_event_free(pawkit_net_client_event_t evt);
+
+pawkit_net_client_event_type_t pawkit_net_client_event_get_type(pawkit_net_client_event_t evt);
 /// Ownership is retained by the event. Can be NULL.
-pawkit_u8 const *pawkit_net_client_event_get_data(pawkit_net_client_event evt, pawkit_usize *size);
+pawkit_u8 const *pawkit_net_client_event_get_data(pawkit_net_client_event_t evt, pawkit_usize *size);
 
 #ifdef __cplusplus
 }
@@ -85,7 +89,7 @@ namespace PawKit::Networking {
             return static_cast<NetHostPeerEvent *>(event);
         }
 
-        pawkit_net_host_event_type GetType() {
+        pawkit_net_host_event_type_t GetType() {
             return pawkit_net_host_event_get_type(*this);
         }
 
@@ -114,15 +118,15 @@ namespace PawKit::Networking {
         NetHostPeer(NetHostPeer const &copy) = delete;
         NetHostPeer(NetHostPeer &&move) = delete;
 
-        operator pawkit_net_host_peer () {
-            return static_cast<pawkit_net_host_peer>(this);
+        operator pawkit_net_host_peer_t () {
+            return static_cast<pawkit_net_host_peer_t>(this);
         }
 
         void operator delete (void *ptr) {
             // Empty to avoid double free.
         }
 
-        static NetHostPeer *From(pawkit_net_host_peer event) {
+        static NetHostPeer *From(pawkit_net_host_peer_t event) {
             return static_cast<NetHostPeer *>(event);
         }
 
@@ -143,12 +147,12 @@ namespace PawKit::Networking {
         }
 
         inline std::string GetHostId() {
-            pawkit_usize len;
-            char const *cstr = pawkit_net_host_peer_get_host_id(*this, &len);
+            pawkit_usize size;
+            char const *cstr = pawkit_net_host_peer_get_host_id(*this, &size);
 
-            std::string str {cstr, cstr + len};
+            std::string str {cstr, cstr + size};
 
-            pawkit_free_string(cstr, len);
+            pawkit_free_string(cstr, size);
 
             return str;
         }
@@ -163,19 +167,19 @@ namespace PawKit::Networking {
         NetClientPeerEvent(NetClientPeerEvent const &copy) = delete;
         NetClientPeerEvent(NetClientPeerEvent &&move) = delete;
 
-        operator pawkit_net_client_event () {
-            return static_cast<pawkit_net_client_event>(this);
+        operator pawkit_net_client_event_t () {
+            return static_cast<pawkit_net_client_event_t>(this);
         }
 
         void operator delete (void *ptr) {
             // Empty to avoid double free.
         }
 
-        static NetClientPeerEvent *From(pawkit_net_client_event event) {
+        static NetClientPeerEvent *From(pawkit_net_client_event_t event) {
             return static_cast<NetClientPeerEvent *>(event);
         }
 
-        pawkit_net_client_event_type GetType() {
+        pawkit_net_client_event_type_t GetType() {
             return pawkit_net_client_event_get_type(*this);
         }
 
@@ -199,15 +203,15 @@ namespace PawKit::Networking {
         NetClientPeer(NetClientPeer const &copy) = delete;
         NetClientPeer(NetClientPeer &&move) = delete;
 
-        operator pawkit_net_client_peer () {
-            return static_cast<pawkit_net_client_peer>(this);
+        operator pawkit_net_client_peer_t () {
+            return static_cast<pawkit_net_client_peer_t>(this);
         }
 
         void operator delete (void *ptr) {
             // Empty to avoid double free.
         }
 
-        static NetClientPeer *From(pawkit_net_client_peer event) {
+        static NetClientPeer *From(pawkit_net_client_peer_t event) {
             return static_cast<NetClientPeer *>(event);
         }
 

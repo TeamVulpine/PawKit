@@ -27,7 +27,7 @@ pawkit_vfs_t pawkit_vfs_zip(pawkit_vfs_buffer_t buf, pawkit_vfs_error_t *error);
 
 pawkit_vfs_t pawkit_vfs_working(pawkit_vfs_error_t *error);
 
-pawkit_vfs_t pawkit_vfs_subdirectory(pawkit_vfs_t vfs, char const *subdirectory, pawkit_usize subdirectory_len, pawkit_vfs_error_t *error);
+pawkit_vfs_t pawkit_vfs_subdirectory(pawkit_vfs_t vfs, char const *subdirectory, pawkit_usize subdirectory_size, pawkit_vfs_error_t *error);
 
 void pawkit_vfs_destroy(pawkit_vfs_t vfs);
 
@@ -36,7 +36,7 @@ pawkit_vfs_buffer_t pawkit_vfs_buffer_from_bytes(pawkit_u8 const *ptr, pawkit_us
 
 void pawkit_vfs_buffer_destroy(pawkit_vfs_buffer_t buf);
 
-pawkit_vfs_buffer_t pawkit_vfs_open(pawkit_vfs_t vfs, char const *path, pawkit_usize path_len, pawkit_vfs_error_t *error);
+pawkit_vfs_buffer_t pawkit_vfs_open(pawkit_vfs_t vfs, char const *path, pawkit_usize path_size, pawkit_vfs_error_t *error);
 
 pawkit_usize pawkit_vfs_buffer_read(pawkit_vfs_buffer_t buf, pawkit_u8 *data, pawkit_usize size, pawkit_vfs_error_t *error);
 
@@ -112,15 +112,15 @@ namespace PawKit::Vfs {
         /// Reads the buffer to an array
         Result<std::vector<pawkit_usize>> ReadToArray() {
             pawkit_vfs_error_t err = 0;
-            pawkit_usize len = 0;
-            pawkit_u8 const *data = pawkit_vfs_buffer_read_to_array(*this, &len, &err);
+            pawkit_usize size = 0;
+            pawkit_u8 const *data = pawkit_vfs_buffer_read_to_array(*this, &size, &err);
 
             if (err) 
                 return std::unexpected(err);
 
-            std::vector<pawkit_usize> arr {data, data + len};
+            std::vector<pawkit_usize> arr {data, data + size};
 
-            pawkit_free_array(data, len);
+            pawkit_free_array(data, size);
 
             return arr;
         }
@@ -128,15 +128,15 @@ namespace PawKit::Vfs {
         /// Reads the buffer to a string
         Result<std::string> ReadToString() {
             pawkit_vfs_error_t err = 0;
-            pawkit_usize len;
-            char const *data = pawkit_vfs_buffer_read_to_string(*this, &len, &err);
+            pawkit_usize size;
+            char const *data = pawkit_vfs_buffer_read_to_string(*this, &size, &err);
 
             if (err) 
                 return std::unexpected(err);
 
-            std::string arr {data, data + len};
+            std::string arr {data, data + size};
 
-            pawkit_free_string(data, len);
+            pawkit_free_string(data, size);
 
             return arr;
         }
@@ -167,15 +167,15 @@ namespace PawKit::Vfs {
         /// Gets the next file in the list
         Result<std::optional<std::string>> Next() {
             pawkit_vfs_error_t err = 0;
-            pawkit_usize len;
-            char const *filename = pawkit_vfs_list_next(*this, &len, &err);
+            pawkit_usize size;
+            char const *fisizeame = pawkit_vfs_list_next(*this, &size, &err);
 
             if (err)
                 return std::unexpected(err);
 
-            std::string arr {filename, filename + len};
+            std::string arr {fisizeame, fisizeame + size};
 
-            pawkit_free_string(filename, len);
+            pawkit_free_string(fisizeame, size);
 
             return arr;
         }
@@ -342,7 +342,7 @@ namespace PawKit::Vfs {
         Result<Buffer *> Open(std::string_view path) {
             pawkit_vfs_error_t error = 0;
 
-            pawkit_vfs_buffer_t buf = pawkit_vfs_open(*this, path.data(), path.length(), &error);
+            pawkit_vfs_buffer_t buf = pawkit_vfs_open(*this, path.data(), path.size(), &error);
 
             if (error)
                 return std::unexpected(error);

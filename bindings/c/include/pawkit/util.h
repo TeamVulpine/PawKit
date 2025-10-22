@@ -33,8 +33,8 @@ typedef ptrdiff_t pawkit_isize;
 typedef float pawkit_f32;
 typedef double pawkit_f64;
 
-void pawkit_free_string(char const *str, pawkit_usize len);
-void pawkit_free_array(pawkit_u8 const *buf, pawkit_usize len);
+void pawkit_free_string(char const *str, pawkit_usize size);
+void pawkit_free_array(pawkit_u8 const *buf, pawkit_usize size);
 
 #ifdef __cplusplus
 }
