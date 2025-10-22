@@ -88,6 +88,7 @@ unsafe extern "C" fn pawkit_vfs_working(error: *mut CVfsError) -> CVfs {
 unsafe extern "C" fn pawkit_vfs_subdirectory(
     vfs: CVfs,
     subdirectory: *const c_char,
+    subdirectory_len: usize,
     error: *mut CVfsError,
 ) -> CVfs {
     unsafe {
@@ -97,7 +98,7 @@ unsafe extern "C" fn pawkit_vfs_subdirectory(
             return null_mut();
         };
 
-        let Some(subdirectory) = cstr_to_str(subdirectory) else {
+        let Some(subdirectory) = cstr_to_str(subdirectory, subdirectory_len) else {
             set_if_valid(error, ERROR_INVALID_PTR);
 
             return null_mut();
@@ -143,6 +144,7 @@ unsafe extern "C" fn pawkit_vfs_buffer_destroy(buf: CVfsBuffer) {
 unsafe extern "C" fn pawkit_vfs_open(
     vfs: CVfs,
     path: *const c_char,
+    path_len: usize,
     error: *mut CVfsError,
 ) -> CVfsBuffer {
     unsafe {
@@ -152,7 +154,7 @@ unsafe extern "C" fn pawkit_vfs_open(
             return null_mut();
         };
 
-        let Some(path) = cstr_to_str(path) else {
+        let Some(path) = cstr_to_str(path, path_len) else {
             set_if_valid(error, ERROR_INVALID_PTR);
 
             return null_mut();
@@ -228,10 +230,17 @@ unsafe extern "C" fn pawkit_vfs_buffer_read_to_array(
 #[unsafe(no_mangle)]
 unsafe extern "C" fn pawkit_vfs_buffer_read_to_string(
     buf: CVfsBuffer,
+    len: *mut usize,
     error: *mut CVfsError,
 ) -> *const c_char {
     unsafe {
         let Some(buf) = ptr_to_ref_mut(buf) else {
+            set_if_valid(error, ERROR_INVALID_PTR);
+
+            return null_mut();
+        };
+
+        let Some(len) = ptr_to_ref_mut(len) else {
             set_if_valid(error, ERROR_INVALID_PTR);
 
             return null_mut();
@@ -247,7 +256,7 @@ unsafe extern "C" fn pawkit_vfs_buffer_read_to_string(
 
         ok(error);
 
-        return disown_str_to_cstr(&data);
+        return disown_str_to_cstr(&data, len);
     }
 }
 
@@ -315,35 +324,53 @@ unsafe extern "C" fn pawkit_vfs_list_destroy(list: CVfsList) {
     }
 }
 
-/// Takes ownership of the list.
-/// The pointer to the buffer will no longer be valid after calling.
-/// The only error here would be ERROR_INVALID_PTR so it can be omitted
 #[unsafe(no_mangle)]
 unsafe extern "C" fn pawkit_vfs_list_with_extension(
     list: CVfsList,
     extension: *const c_char,
-) -> CVfsList {
+    extension_len: usize,
+    error: *mut CVfsError,
+) {
     unsafe {
-        let Some(value) = move_to_stack(list) else {
-            return null_mut();
+        let Some(value) = ptr_to_ref_mut(list) else {
+            set_if_valid(error, ERROR_INVALID_PTR);
+            return;
         };
 
-        let Some(extension) = cstr_to_str(extension) else {
-            return null_mut();
+        let Some(extension) = cstr_to_str(extension, extension_len) else {
+            set_if_valid(error, ERROR_INVALID_PTR);
+            return;
         };
 
-        return move_to_heap(Box::new(value.with_extension(extension)));
+        let old_iter = std::mem::replace(value, Box::new(std::iter::empty()));
+        let new_iter = old_iter.with_extension(extension);
+
+        *value = Box::new(new_iter);
+
+        ok(error);
     }
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn pawkit_vfs_list_next(list: CVfsList, error: *mut CVfsError) -> *const c_char {
+unsafe extern "C" fn pawkit_vfs_list_next(
+    list: CVfsList,
+    len: *mut usize,
+    error: *mut CVfsError,
+) -> *const c_char {
     unsafe {
         let Some(value) = ptr_to_ref_mut(list) else {
             return null_mut();
         };
 
+        let Some(len) = ptr_to_ref_mut(len) else {
+            set_if_valid(error, ERROR_INVALID_PTR);
+
+            return null_mut();
+        };
+
         let Some(result) = value.next() else {
+            *len = 0;
+
             // The result was None instead of Some(Err) so it's technically OK.
             ok(error);
 
@@ -356,6 +383,6 @@ unsafe extern "C" fn pawkit_vfs_list_next(list: CVfsList, error: *mut CVfsError)
 
         ok(error);
 
-        return disown_str_to_cstr(&result);
+        return disown_str_to_cstr(&result, len);
     }
 }

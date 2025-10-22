@@ -1,7 +1,9 @@
 #![feature(decl_macro, generic_atomic)]
 
+use core::slice;
 use std::{
-    ffi::{CString, c_char},
+    alloc::{Layout, alloc, dealloc},
+    ffi::c_char,
     ptr,
 };
 
@@ -56,39 +58,6 @@ macro c_enum {
     ) => {
         const $name: $base_ty = $idx;
     },
-}
-
-unsafe fn cstr_to_str<'a>(cstr: *const c_char) -> Option<&'a str> {
-    unsafe {
-        use std::ffi::CStr;
-        if cstr.is_null() {
-            return None;
-        }
-
-        let cstr = CStr::from_ptr(cstr);
-        return match cstr.to_str() {
-            Ok(str) => Some(str),
-            Err(_) => None,
-        };
-    }
-}
-
-unsafe fn disown_str_to_cstr(s: &str) -> *const c_char {
-    let Ok(c_str) = CString::new(s) else {
-        return ptr::null();
-    };
-
-    return c_str.into_raw() as *const c_char;
-}
-
-unsafe fn drop_cstr(s: *const c_char) {
-    unsafe {
-        if s.is_null() {
-            return;
-        }
-
-        let _ = CString::from_raw(s as *mut c_char);
-    }
 }
 
 unsafe fn move_to_heap<T>(value: T) -> *mut T {
@@ -156,23 +125,34 @@ unsafe fn ptr_to_ref<'a, T>(ptr: *const T) -> Option<&'a T> {
 }
 
 unsafe fn move_slice_to_heap<T: Copy>(slice: &[T], size: &mut usize) -> *mut T {
-    let boxed: Box<[T]> = slice.to_vec().into_boxed_slice();
+    if *size == 0 {
+        return std::ptr::null_mut();
+    }
 
-    *size = boxed.len();
+    unsafe {
+        let layout = Layout::array::<T>(*size).unwrap();
 
-    let ptr = Box::into_raw(boxed) as *mut T;
+        let ptr = alloc(layout) as *mut T;
 
-    return ptr;
+        if ptr.is_null() {
+            std::alloc::handle_alloc_error(layout);
+        }
+
+        ptr::copy_nonoverlapping(slice.as_ptr(), ptr, *size);
+
+        return ptr;
+    }
 }
 
 unsafe fn drop_slice_from_heap<T>(ptr: *mut T, size: usize) {
-    unsafe {
-        if ptr.is_null() || !ptr.is_aligned() || size == 0 {
-            return;
-        }
+    if ptr.is_null() || size == 0 {
+        return;
+    }
 
-        let slice = std::slice::from_raw_parts_mut(ptr, size);
-        drop(Box::from_raw(slice));
+    let layout = Layout::array::<T>(size).unwrap();
+
+    unsafe {
+        dealloc(ptr as *mut u8, layout);
     }
 }
 
@@ -187,15 +167,36 @@ unsafe fn set_if_valid<T>(ptr: *mut T, value: T) {
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn pawkit_free_string(str: *const c_char) {
+unsafe extern "C" fn pawkit_free_array(slice: *mut u8, size: usize) {
     unsafe {
-        drop_cstr(str);
+        drop_slice_from_heap(slice, size);
     }
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn pawkit_free_array(slice: *mut u8, size: usize) {
+unsafe extern "C" fn pawkit_free_string(str: *const c_char, size: usize) {
     unsafe {
-        drop_slice_from_heap(slice, size);
+        drop_slice_from_heap(str as *mut u8, size);
+    }
+}
+
+unsafe fn cstr_to_str<'a>(cstr: *const c_char, len: usize) -> Option<&'a str> {
+    if cstr.is_null() {
+        return None;
+    }
+
+    let bytes = unsafe { slice::from_raw_parts(cstr as *const u8, len) };
+
+    return std::str::from_utf8(bytes).ok();
+}
+
+unsafe fn str_to_cstr<'a>(s: &'a str, len: &mut usize) -> *const c_char {
+    *len = s.len();
+    return s.as_ptr() as *const c_char;
+}
+
+unsafe fn disown_str_to_cstr(s: &str, len: &mut usize) -> *const c_char {
+    unsafe {
+        return move_slice_to_heap(s.as_bytes(), len) as *const c_char;
     }
 }

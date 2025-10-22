@@ -326,6 +326,7 @@ unsafe extern "C" fn pawkit_input_manager_destroy(manager: CInputManager) {
 unsafe extern "C" fn pawkit_input_manager_register_binding(
     manager: CInputManager,
     name: *const c_char,
+    name_len: usize,
     kind: CBindingKind,
     bindings: *const CBinding,
     size: usize,
@@ -335,7 +336,7 @@ unsafe extern "C" fn pawkit_input_manager_register_binding(
             return false;
         };
 
-        let Some(name) = cstr_to_str(name) else {
+        let Some(name) = cstr_to_str(name, name_len) else {
             return false;
         };
 
@@ -549,6 +550,7 @@ unsafe extern "C" fn pawkit_input_manager_get_frame(
     manager: CInputManager,
     handler: usize,
     name: *const c_char,
+    name_len: usize,
     in_frame: *mut InputFrame,
 ) -> bool {
     unsafe {
@@ -556,7 +558,7 @@ unsafe extern "C" fn pawkit_input_manager_get_frame(
             return false;
         };
 
-        let Some(name) = cstr_to_str(name) else {
+        let Some(name) = cstr_to_str(name, name_len) else {
             return false;
         };
 

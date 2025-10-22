@@ -8,18 +8,19 @@ use pawkit_net::{NetClientPeerEvent, NetHostPeerEvent, SimpleNetClientPeer, Simp
 use pawkit_net_signaling::model::HostId;
 
 use crate::{
-    c_enum, cstr_to_str, disown_str_to_cstr, drop_cstr, drop_from_heap, move_to_heap, ptr_to_ref,
-    ptr_to_slice,
+    c_enum, cstr_to_str, disown_str_to_cstr, drop_from_heap, move_to_heap, ptr_to_ref,
+    ptr_to_ref_mut, ptr_to_slice,
 };
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn pawkit_net_host_peer_create(
     server_url: *const c_char,
+    server_url_len: usize,
     game_id: u32,
     request_proxy: bool,
 ) -> *mut SimpleNetHostPeer {
     unsafe {
-        let Some(server_url) = cstr_to_str(server_url) else {
+        let Some(server_url) = cstr_to_str(server_url, server_url_len) else {
             return null_mut();
         };
 
@@ -45,22 +46,20 @@ unsafe extern "C" fn pawkit_net_host_peer_destroy(peer: *mut SimpleNetHostPeer) 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn pawkit_net_host_peer_get_host_id(
     peer: *mut SimpleNetHostPeer,
+    len: *mut usize,
 ) -> *const c_char {
     unsafe {
         if peer.is_null() {
             return ptr::null();
         }
 
+        let Some(len) = ptr_to_ref_mut(len) else {
+            return null_mut();
+        };
+
         let peer = &*peer;
 
-        return disown_str_to_cstr(&peer.get_host_id().to_string());
-    }
-}
-
-#[unsafe(no_mangle)]
-unsafe extern "C" fn pawkit_net_host_peer_free_host_id(s: *const c_char) {
-    unsafe {
-        drop_cstr(s);
+        return disown_str_to_cstr(&peer.get_host_id().to_string(), len);
     }
 }
 
@@ -178,15 +177,16 @@ unsafe extern "C" fn pawkit_net_host_event_get_data(
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn pawkit_net_client_peer_create(
-    host_id_str: *const c_char,
+    host_id: *const c_char,
+    host_id_len: usize,
     game_id: u32,
 ) -> *mut SimpleNetClientPeer {
     unsafe {
-        let Some(host_id_str) = cstr_to_str(host_id_str) else {
+        let Some(host_id) = cstr_to_str(host_id, host_id_len) else {
             return null_mut();
         };
 
-        let Ok(host_id) = HostId::from_str(host_id_str) else {
+        let Ok(host_id) = HostId::from_str(host_id) else {
             return null_mut();
         };
 

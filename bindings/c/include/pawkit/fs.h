@@ -2,8 +2,7 @@
 
 #include "assert.h"
 #include "util.h"
-#include <type_traits>
-#include <utility>
+#include <string_view>
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,7 +27,7 @@ pawkit_vfs_t pawkit_vfs_zip(pawkit_vfs_buffer_t buf, pawkit_vfs_error_t *error);
 
 pawkit_vfs_t pawkit_vfs_working(pawkit_vfs_error_t *error);
 
-pawkit_vfs_t pawkit_vfs_subdirectory(pawkit_vfs_t vfs, char const *subdirectory, pawkit_vfs_error_t *error);
+pawkit_vfs_t pawkit_vfs_subdirectory(pawkit_vfs_t vfs, char const *subdirectory, pawkit_usize subdirectory_len, pawkit_vfs_error_t *error);
 
 void pawkit_vfs_destroy(pawkit_vfs_t vfs);
 
@@ -37,13 +36,13 @@ pawkit_vfs_buffer_t pawkit_vfs_buffer_from_bytes(pawkit_u8 const *ptr, pawkit_us
 
 void pawkit_vfs_buffer_destroy(pawkit_vfs_buffer_t buf);
 
-pawkit_vfs_buffer_t pawkit_vfs_open(pawkit_vfs_t vfs, char const *path, pawkit_vfs_error_t *error);
+pawkit_vfs_buffer_t pawkit_vfs_open(pawkit_vfs_t vfs, char const *path, pawkit_usize path_len, pawkit_vfs_error_t *error);
 
 pawkit_usize pawkit_vfs_buffer_read(pawkit_vfs_buffer_t buf, pawkit_u8 *data, pawkit_usize size, pawkit_vfs_error_t *error);
 
 uint8_t const *pawkit_vfs_buffer_read_to_array(pawkit_vfs_buffer_t buf, pawkit_usize *size, pawkit_vfs_error_t *error);
 
-char const *pawkit_vfs_buffer_read_to_string(pawkit_vfs_buffer_t buf, pawkit_vfs_error_t *error);
+char const *pawkit_vfs_buffer_read_to_string(pawkit_vfs_buffer_t buf, pawkit_usize *size, pawkit_vfs_error_t *error);
 
 pawkit_vfs_list_t pawkit_vfs_list_subdirectories(pawkit_vfs_t vfs, pawkit_vfs_error_t *error);
 
@@ -51,11 +50,9 @@ pawkit_vfs_list_t pawkit_vfs_list_files(pawkit_vfs_t vfs, pawkit_vfs_error_t *er
 
 pawkit_vfs_list_t pawkit_vfs_list_files_recursive(pawkit_vfs_t vfs, pawkit_vfs_error_t *error);
 
-/// Takes ownership of the list. The pointer will no longer be valid after calling.
-/// The only error would be PAWKIT_VFS_ERROR_INVALID_PTR so it is omitted.
-pawkit_vfs_list_t pawkit_vfs_list_with_extension(pawkit_vfs_list_t list, char const *extension);
+void pawkit_vfs_list_with_extension(pawkit_vfs_list_t list, char const *extension, pawkit_vfs_error_t *error);
 
-char const *pawkit_vfs_list_next(pawkit_vfs_list_t list, pawkit_vfs_error_t *error);
+char const *pawkit_vfs_list_next(pawkit_vfs_list_t list, pawkit_usize *size, pawkit_vfs_error_t *error);
 
 void pawkit_vfs_list_destroy(pawkit_vfs_list_t list);
 
@@ -66,156 +63,132 @@ void pawkit_vfs_list_destroy(pawkit_vfs_list_t list);
 #include <span>
 #include <string>
 #include <vector>
+#include <expected>
 
 namespace PawKit::Vfs {
     template <typename T>
-    struct Result final {
-        pawkit_vfs_error_t err {0};
-        union {
-            T value;
-        };
-
-        template <typename ...TParams>
-            requires std::is_constructible_v<T, TParams...>
-        Result(TParams &&...params) : value(std::forward<TParams>(params)...) {}
-        Result(pawkit_vfs_error_t error) : err(error) {}
-        ~Result() {
-            if (err)
-                value.~T();
-        }
-
-        Result(Result const &other)
-            requires std::is_copy_constructible_v<T> :
-            err(other.err)
-        {
-            if (!err)
-                new(&value) T(other.value);
-        }
-
-        Result(Result &&other)
-            requires std::is_move_constructible_v<T> :
-            err(other.err)
-        {
-            if (!err)
-                new(&value) T(std::move(other.value));
-        }
-
-        Result& operator=(Result const &other)
-            requires std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T>
-        {
-            if (this == &other)
-                return *this;
-
-            if (!err)
-                value.~T();
-
-            err = other.err;
-            if (!err)
-                new(&value) T(other.value);
-
-            return *this;
-        }
-
-        Result& operator=(Result &&other)
-            requires std::is_move_constructible_v<T> && std::is_move_assignable_v<T>
-        {
-            if (this == &other)
-                return *this;
-
-            if (!err) 
-                value.~T();
-
-            err = other.err;
-            if (!err)
-                new(&value) T(std::move(other.value));
-
-            return *this;
-        }
-
-        bool IsOk() {
-            return !err;
-        }
-
-        bool IsErr() {
-            return err;
-        }
-
-        T &Unwrap() {
-            if (IsErr())
-                throw err;
-
-            return value;
-        }
-
-        pawkit_vfs_error_t UnwrapErr() {
-            if (IsOk())
-                throw err;
-            
-            return err;
-        }
-    };
-
-    // template <typename T>
-    // using Result = std::variant<T, pawkit_vfs_error_t>;
-
+    using Result = std::expected<T, pawkit_vfs_error_t>;
+    
     /// Represents a virtual file buffer.
     /// It can be represented by an actual file buffer, a zip file buffer, or a byte array.
-    struct Buffer : OpaqueShared<pawkit_vfs_buffer_t> {
-        Buffer(pawkit_vfs_buffer_t buf) : OpaqueShared(buf, pawkit_vfs_buffer_destroy) {}
+    struct Buffer final {
+        ~Buffer() {
+            pawkit_vfs_buffer_destroy(*this);
+        };
 
-        /// Creates a buffer from a byte array
-        static std::optional<Buffer> FromBytes(std::span<pawkit_u8 const> bytes) {
-            pawkit_vfs_buffer_t buf = pawkit_vfs_buffer_from_bytes(bytes.data(), bytes.size());
+        Buffer() = delete;
+        Buffer(Buffer const &copy) = delete;
+        Buffer(Buffer &&move) = delete;
 
-            if (!buf)
-                return std::nullopt;
-
-            return buf;
+        operator pawkit_vfs_buffer_t () {
+            return static_cast<pawkit_vfs_buffer_t>(this);
         }
 
-        // Reads up to the size of the input buffer in bytes, returns the number of bytes consumed
+        void operator delete (void *ptr) {
+            // Empty to avoid double free.
+        }
+
+        static Buffer *From(pawkit_vfs_buffer_t buf) {
+            return static_cast<Buffer *>(buf);
+        }
+
+        /// Creates a buffer from a byte array
+        static Buffer *FromBytes(std::span<pawkit_u8 const> bytes) {
+            return From(pawkit_vfs_buffer_from_bytes(bytes.data(), bytes.size()));
+        }
+
+        /// Reads a number of bytes from the buffer
         Result<pawkit_usize> Read(std::span<pawkit_u8> buffer) {
             pawkit_vfs_error_t err = 0;
 
-            pawkit_usize ok = pawkit_vfs_buffer_read(Get(), buffer.data(), buffer.size(), &err);
+            pawkit_usize ok = pawkit_vfs_buffer_read(*this, buffer.data(), buffer.size(), &err);
 
             if (err) 
-                return err;
+                return std::unexpected(err);
 
             return ok;
         }
 
-        /// Reads the buffer to a vector
-        Result<std::vector<pawkit_u8>> ReadToArray() {
-            return GetBufErr<pawkit_vfs_error_t, Result<std::vector<pawkit_u8>>>([&](pawkit_usize &data, pawkit_vfs_error_t &err) {
-                return pawkit_vfs_buffer_read_to_array(Get(), &data, &err);
-            });
+        /// Reads the buffer to an array
+        Result<std::vector<pawkit_usize>> ReadToArray() {
+            pawkit_vfs_error_t err = 0;
+            pawkit_usize len = 0;
+            pawkit_u8 const *data = pawkit_vfs_buffer_read_to_array(*this, &len, &err);
+
+            if (err) 
+                return std::unexpected(err);
+
+            std::vector<pawkit_usize> arr {data, data + len};
+
+            pawkit_free_array(data, len);
+
+            return arr;
         }
 
         /// Reads the buffer to a string
         Result<std::string> ReadToString() {
-            return GetStringErr<pawkit_vfs_error_t, Result<std::string>>([&](pawkit_vfs_error_t &err) {
-                return pawkit_vfs_buffer_read_to_string(Get(), &err);
-            });
+            pawkit_vfs_error_t err = 0;
+            pawkit_usize len;
+            char const *data = pawkit_vfs_buffer_read_to_string(*this, &len, &err);
+
+            if (err) 
+                return std::unexpected(err);
+
+            std::string arr {data, data + len};
+
+            pawkit_free_string(data, len);
+
+            return arr;
         }
     };
 
     /// Represents a "list" operation for the VFS
-    struct List : OpaqueUnique<pawkit_vfs_list_t> {
-        List(pawkit_vfs_list_t list) : OpaqueUnique(list, pawkit_vfs_list_destroy) {}
+    struct List final {
+        ~List() {
+            pawkit_vfs_list_destroy(*this);
+        };
+
+        List() = delete;
+        List(List const &copy) = delete;
+        List(List &&move) = delete;
+
+        operator pawkit_vfs_list_t () {
+            return static_cast<pawkit_vfs_list_t>(this);
+        }
+
+        void operator delete (void *ptr) {
+            // Empty to avoid double free.
+        }
+
+        static List *From(pawkit_vfs_list_t list) {
+            return static_cast<List *>(list);
+        }
 
         /// Gets the next file in the list
         Result<std::optional<std::string>> Next() {
-            return GetStringErrOptional<pawkit_vfs_error_t, Result<std::optional<std::string>>>([&](pawkit_vfs_error_t &err) {
-                return pawkit_vfs_list_next(Get(), &err);
-            });
+            pawkit_vfs_error_t err = 0;
+            pawkit_usize len;
+            char const *filename = pawkit_vfs_list_next(*this, &len, &err);
+
+            if (err)
+                return std::unexpected(err);
+
+            std::string arr {filename, filename + len};
+
+            pawkit_free_string(filename, len);
+
+            return arr;
         }
 
         /// Only look for files with a given extension
-        List &WithExtension(std::string const &ext) {
-            Reset(pawkit_vfs_list_with_extension(Release(), ext.c_str()));
-            
-            return *this;
+        Result<List *> WithExtension(std::string const &ext) {
+            pawkit_vfs_error_t err = 0;
+            pawkit_vfs_list_with_extension(*this, ext.c_str(), &err);
+
+            if (err)
+                return std::unexpected(err);
+
+            return this;
         }
 
         struct Iterator {
@@ -239,11 +212,12 @@ namespace PawKit::Vfs {
                 }
 
                 Result<std::optional<std::string>> result = list->Next();
-                if (result.IsErr()) {
-                    current = result.UnwrapErr();
+                
+                if (!result) {
+                    current = std::unexpected(result.error());
                     list = nullptr;
                 } else {
-                    std::optional<std::string> &opt = result.Unwrap();
+                    std::optional<std::string> &opt = *result;
                     if (!opt.has_value()) {
                         current = std::nullopt;
                         list = nullptr;
@@ -271,91 +245,109 @@ namespace PawKit::Vfs {
 
     /// Represents a virtual filesystem.
     /// A virtual file system represent the real filesystem, a zip file, or a subdirectory of them.
-    struct Filesystem : OpaqueShared<pawkit_vfs_t> {
-        Filesystem(pawkit_vfs_t ptr) : OpaqueShared(ptr, pawkit_vfs_destroy) {}
+    struct Filesystem final {
+        ~Filesystem() {
+            pawkit_vfs_destroy(*this);
+        };
 
+        Filesystem() = delete;
+        Filesystem(Filesystem const &copy) = delete;
+        Filesystem(Filesystem &&move) = delete;
+
+        operator pawkit_vfs_t () {
+            return static_cast<pawkit_vfs_t>(this);
+        }
+
+        void operator delete (void *ptr) {
+            // Empty to avoid double free.
+        }
+
+        static Filesystem *From(pawkit_vfs_t fs) {
+            return static_cast<Filesystem *>(fs);
+        }
+        
         /// Gets the virtual filesystem associated with the current working directory
-        static Result<Filesystem> Working() {
+        static Result<Filesystem *> Working() {
             pawkit_vfs_error_t error = 0;
 
             pawkit_vfs_t vfs = pawkit_vfs_working(&error);
 
             if (error)
-                return Result<Filesystem>(error);
+                return std::unexpected(error);
 
-            return Result<Filesystem>(Filesystem(vfs));
+            return From(vfs);
         }
-
-        /// Creates a virtual filesystem from the contents of a zip file
-        static Result<Filesystem> Zip(Buffer buffer) {
+        
+        /// Takes ownership of the buffer, the pointer will no longer be valid.
+        static Result<Filesystem *> Zip(Buffer *buf) {
             pawkit_vfs_error_t error = 0;
 
-            pawkit_vfs_t vfs = pawkit_vfs_zip(buffer.Get(), &error);
+            pawkit_vfs_t vfs = pawkit_vfs_zip(*buf, &error);
 
             if (error)
-                return Result<Filesystem>(error);
+                return std::unexpected(error);
 
-            return Result<Filesystem>(Filesystem(vfs));
+            return From(vfs);
         }
 
         /// Gets a subdirectory of the filesystem as a new filesystem
-        Result<Filesystem> Subdirectory(std::string const &path) {
+        Result<Filesystem *> Subdirectory(std::string_view path) {
             pawkit_vfs_error_t error = 0;
 
-            pawkit_vfs_t vfs = pawkit_vfs_subdirectory(Get(), path.c_str(), &error);
+            pawkit_vfs_t vfs = pawkit_vfs_subdirectory(*this, path.data(), path.size(), &error);
 
             if (error)
-                return Result<Filesystem>(error);
+                return std::unexpected(error);
 
-            return Result<Filesystem>(Filesystem(vfs));
+            return From(vfs);
         }
 
         /// Lists all the top-level subdirectories of the filesystem
-        Result<List> ListSubdirectories() {
+        Result<List *> ListSubdirectories() {
             pawkit_vfs_error_t error = 0;
 
-            pawkit_vfs_list_t list = pawkit_vfs_list_subdirectories(Get(),  &error);
+            pawkit_vfs_list_t list = pawkit_vfs_list_subdirectories(*this,  &error);
 
             if (error)
-                return Result<List>(error);
+                return std::unexpected(error);
 
-            return Result<List>(list);
+            return List::From(list);
         }
 
         /// Lists all the top-level files of the filesystem
-        Result<List> ListFiles() {
+        Result<List *> ListFiles() {
             pawkit_vfs_error_t error = 0;
 
-            pawkit_vfs_list_t list = pawkit_vfs_list_files(Get(),  &error);
+            pawkit_vfs_list_t list = pawkit_vfs_list_files(*this,  &error);
 
             if (error)
-                return Result<List>(error);
+                return std::unexpected(error);
 
-            return Result<List>(list);
+            return List::From(list);
         }
 
         /// Lists all the files of the filesystem recursively
-        Result<List> ListFilesRecursive() {
+        Result<List *> ListFilesRecursive() {
             pawkit_vfs_error_t error = 0;
 
-            pawkit_vfs_list_t list = pawkit_vfs_list_files_recursive(Get(),  &error);
+            pawkit_vfs_list_t list = pawkit_vfs_list_files_recursive(*this,  &error);
 
             if (error)
-                return Result<List>(error);
+                return std::unexpected(error);
 
-            return Result<List>(list);
+            return List::From(list);
         }
 
         /// Opens the file at the given path
-        Result<Buffer> Open(std::string const &path) {
+        Result<Buffer *> Open(std::string_view path) {
             pawkit_vfs_error_t error = 0;
 
-            pawkit_vfs_buffer_t buf = pawkit_vfs_open(Get(), path.c_str(), &error);
-            
-            if (error)
-                return Result<Buffer>(error);
+            pawkit_vfs_buffer_t buf = pawkit_vfs_open(*this, path.data(), path.length(), &error);
 
-            return Result<Buffer>(buf);
+            if (error)
+                return std::unexpected(error);
+
+            return Buffer::From(buf);
         }
     };
 }
