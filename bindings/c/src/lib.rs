@@ -125,12 +125,10 @@ unsafe fn ptr_to_ref<'a, T>(ptr: *const T) -> Option<&'a T> {
 }
 
 unsafe fn move_slice_to_heap<T: Copy>(slice: &[T], size: &mut usize) -> *mut T {
-    if *size == 0 {
-        return std::ptr::null_mut();
-    }
+    *size = slice.len();
 
     unsafe {
-        let layout = Layout::array::<T>(*size).unwrap();
+        let layout = Layout::array::<T>(slice.len()).unwrap();
 
         let ptr = alloc(layout) as *mut T;
 
@@ -138,7 +136,7 @@ unsafe fn move_slice_to_heap<T: Copy>(slice: &[T], size: &mut usize) -> *mut T {
             std::alloc::handle_alloc_error(layout);
         }
 
-        ptr::copy_nonoverlapping(slice.as_ptr(), ptr, *size);
+        ptr::copy_nonoverlapping(slice.as_ptr(), ptr, slice.len());
 
         return ptr;
     }
