@@ -115,7 +115,7 @@ unsafe extern "C" fn pawkit_vfs_subdirectory(
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn pawkit_vfs_destroy(vfs: CVfs) {
+unsafe extern "C" fn pawkit_vfs_free(vfs: CVfs) {
     unsafe {
         drop_from_heap(vfs);
     }
@@ -134,7 +134,7 @@ unsafe extern "C" fn pawkit_vfs_buffer_from_bytes(ptr: *mut u8, size: usize) -> 
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn pawkit_vfs_buffer_destroy(buf: CVfsBuffer) {
+unsafe extern "C" fn pawkit_vfs_buffer_free(buf: CVfsBuffer) {
     unsafe {
         drop_from_heap(buf);
     }
@@ -318,7 +318,7 @@ unsafe extern "C" fn pawkit_vfs_list_files_recursive(vfs: CVfs, error: *mut CVfs
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn pawkit_vfs_list_destroy(list: CVfsList) {
+unsafe extern "C" fn pawkit_vfs_list_free(list: CVfsList) {
     unsafe {
         drop_from_heap(list);
     }

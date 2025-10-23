@@ -2,7 +2,6 @@
 
 #include "util.h"
 #include "assert.h"
-#include <string_view>
 
 #ifdef __cplusplus
 extern "C" {
@@ -200,10 +199,10 @@ typedef union pawkit_input_binding_t {
     pawkit_input_vector_binding_t vector;
 } pawkit_input_binding_t;
 
-typedef void *pawkit_input_manager_t;
+typedef struct pawkit_input_manager *pawkit_input_manager_t;
 
 pawkit_input_manager_t pawkit_input_manager_create();
-void pawkit_input_manager_destroy(pawkit_input_manager_t manager);
+void pawkit_input_manager_free(pawkit_input_manager_t manager);
 
 bool pawkit_input_manager_register_binding(pawkit_input_manager_t manager, char const *name, pawkit_usize name_size, pawkit_input_binding_type_t type, pawkit_input_binding_t const *binding, pawkit_usize count);
 
@@ -212,7 +211,7 @@ void pawkit_input_manager_lock_bindings(pawkit_input_manager_t manager);
 void pawkit_input_manager_device_connected(pawkit_input_manager_t manager, pawkit_input_family_t family, pawkit_usize id);
 void pawkit_input_manager_device_disconnected(pawkit_input_manager_t manager, pawkit_input_family_t family, pawkit_usize id);
 
-typedef void *pawkit_input_state_t;
+typedef struct pawkit_input_state *pawkit_input_state_t;
 
 pawkit_input_state_t pawkit_input_manager_get_state(pawkit_input_manager_t manager, pawkit_input_family_t family, pawkit_usize id);
 
@@ -221,10 +220,8 @@ void pawkit_input_state_set_axis(pawkit_input_state_t state, pawkit_input_axis_t
 
 void pawkit_input_manager_update(pawkit_input_manager_t manager);
 
-typedef void *pawkit_input_handler_t;
-
 pawkit_usize pawkit_input_manager_create_handler(pawkit_input_manager_t manager);
-void pawkit_input_manager_destroy_handler(pawkit_input_manager_t manager, pawkit_usize handler);
+void pawkit_input_manager_free_handler(pawkit_input_manager_t manager, pawkit_usize handler);
 
 enum {
     PAWKIT_INPUT_FRAME_TYPE_DIGITAL,
@@ -263,111 +260,4 @@ void pawkit_input_manager_disconnect_device_from_handler(pawkit_input_manager_t 
 
 #ifdef __cplusplus
 }
-
-#include <span>
-#include <optional>
-
-namespace PawKit::Input {
-    using Button = pawkit_input_button_t;
-    using Axis = pawkit_input_axis_t;
-    using Family = pawkit_input_family_t;
-    using BindingType = pawkit_input_binding_type_t;
-    using Binding = pawkit_input_binding_t;
-    using Frame = pawkit_input_frame_t;
-
-    struct State final {
-        State() = delete;
-        State(State const &copy) = delete;
-        State(State &&move) = delete;
-        ~State() = delete;
-
-        operator pawkit_input_state_t () {
-            return static_cast<pawkit_input_state_t>(this);
-        }
-
-        static State *From(pawkit_input_state_t state) {
-            return static_cast<State *>(state);
-        }
-
-        inline void SetButton(Button button, bool value) {
-            pawkit_input_state_set_button(*this, button, value);
-        }
-
-        inline void SetAxis(Axis axis, pawkit_f32 value) {
-            pawkit_input_state_set_axis(*this, axis, value);
-        }
-    };
-
-    struct Manager final  {
-        ~Manager() {
-            pawkit_input_manager_destroy(*this);
-        };
-
-        Manager() = delete;
-        Manager(Manager const &copy) = delete;
-        Manager(Manager &&move) = delete;
-
-        operator pawkit_input_manager_t () {
-            return static_cast<pawkit_input_manager_t>(this);
-        }
-
-        void operator delete (void *ptr) {
-            // Empty to avoid double free.
-        }
-
-        static Manager *From(pawkit_input_manager_t list) {
-            return static_cast<Manager *>(list);
-        }
-
-        inline bool RegisterBinding(std::string_view name, BindingType type, std::span<Binding> bindings) {
-            return pawkit_input_manager_register_binding(*this, name.data(), name.size(), type, bindings.data(), bindings.size());
-        }
-
-        inline void LockBindings() {
-            pawkit_input_manager_lock_bindings(*this);
-        }
-
-        inline void DeviceConnected(Family family, pawkit_usize id) {
-            pawkit_input_manager_device_connected(*this, family, id);
-        }
-
-        inline void DeviceDisconnected(Family family, pawkit_usize id) {
-            pawkit_input_manager_device_disconnected(*this, family, id);
-        }
-
-        inline State *GetState(Family family, pawkit_usize id) {
-            return State::From(pawkit_input_manager_get_state(*this, family, id));
-        }
-
-        inline pawkit_usize CreateHandler() {
-            return pawkit_input_manager_create_handler(*this);
-        }
-
-        inline void DestroyHandler(pawkit_usize handler) {
-            pawkit_input_manager_destroy_handler(*this, handler);
-        }
-
-        inline void Upate() {
-            pawkit_input_manager_update(*this);
-        }
-        
-        inline std::optional<Frame> GetFrame(pawkit_usize handler, std::string_view name) {
-            Frame frame;
-
-            if (!pawkit_input_manager_get_frame(*this, handler, name.data(), name.size(), &frame))
-                return std::nullopt;
-
-            return frame;
-        }
-
-        inline void ConnectDeviceToHandler(pawkit_usize handler, Family family, pawkit_usize device) {
-            pawkit_input_manager_connect_device_to_handler(*this, handler, family, device);
-        }
-
-        inline void DisconnectDeviceFromHandler(pawkit_usize handler, Family family, pawkit_usize device) {
-            pawkit_input_manager_disconnect_device_from_handler(*this, handler, family, device);
-        }
-    };
-}
-
 #endif

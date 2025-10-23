@@ -33,7 +33,7 @@ unsafe extern "C" fn pawkit_net_host_peer_create(
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn pawkit_net_host_peer_destroy(peer: *mut SimpleNetHostPeer) {
+unsafe extern "C" fn pawkit_net_host_peer_free(peer: *mut SimpleNetHostPeer) {
     unsafe {
         if peer.is_null() {
             return;
@@ -195,7 +195,7 @@ unsafe extern "C" fn pawkit_net_client_peer_create(
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn pawkit_net_client_peer_destroy(peer: *mut SimpleNetClientPeer) {
+unsafe extern "C" fn pawkit_net_client_peer_free(peer: *mut SimpleNetClientPeer) {
     unsafe {
         if peer.is_null() {
             return;

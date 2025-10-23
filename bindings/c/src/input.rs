@@ -316,7 +316,7 @@ unsafe extern "C" fn pawkit_input_manager_create() -> CInputManager {
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn pawkit_input_manager_destroy(manager: CInputManager) {
+unsafe extern "C" fn pawkit_input_manager_free(manager: CInputManager) {
     unsafe {
         drop_from_heap(manager);
     }
@@ -524,7 +524,7 @@ unsafe extern "C" fn pawkit_input_manager_create_handler(
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn pawkit_input_manager_destroy_handler(manager: CInputManager, handler: usize) {
+unsafe extern "C" fn pawkit_input_manager_free_handler(manager: CInputManager, handler: usize) {
     unsafe {
         let Some(manager) = ptr_to_ref(manager) else {
             return;
