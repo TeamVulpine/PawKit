@@ -1,6 +1,7 @@
 #pragma once
 
 #include "fs.h"
+#include "util.h"
 
 #include <optional>
 #include <span>
@@ -62,7 +63,7 @@ namespace PawKit::Vfs {
         }
 
         /// Reads the buffer to an array
-        Result<std::vector<pawkit_usize>> ReadToArray() {
+        Result<std::vector<pawkit_u8>> ReadToArray() {
             pawkit_vfs_error_t err = 0;
             pawkit_usize size = 0;
             pawkit_u8 const *data = pawkit_vfs_buffer_read_to_array(*this, &size, &err);
@@ -70,7 +71,7 @@ namespace PawKit::Vfs {
             if (err) 
                 return std::unexpected(Error(err));
 
-            std::vector<pawkit_usize> arr {data, data + size};
+            std::vector<pawkit_u8> arr {data, data + size};
 
             pawkit_free_array(data, size);
 
