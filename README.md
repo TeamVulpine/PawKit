@@ -1,8 +1,8 @@
 # PawKit
 
-PawKit is a mninimal game engine toolkit, written in Rust, with support for C, C++, and Lua.
+PawKit is a mninimal game engine toolkit, written in Rust, with support for C, C++, Godot, and Lua.
 
-In the future PawKit will support C#, Godot, and Javascript.
+In the future PawKit will support C# and Javascript.
 
 ## Why a monorepo?
 

@@ -1,6 +1,5 @@
 #![feature(decl_macro, generic_atomic)]
 
-use core::slice;
 use std::{
     alloc::{Layout, alloc, dealloc},
     ffi::c_char,
@@ -90,7 +89,7 @@ unsafe fn ptr_to_slice_mut<'a, T>(ptr: *mut T, size: usize) -> Option<&'a mut [T
             return Some(&mut []);
         }
 
-        if !ptr.is_aligned() || ptr.is_null() || size == 0 {
+        if !ptr.is_aligned() || ptr.is_null() {
             return None;
         }
 
@@ -104,7 +103,7 @@ unsafe fn ptr_to_slice<'a, T>(ptr: *const T, size: usize) -> Option<&'a [T]> {
             return Some(&[]);
         }
 
-        if !ptr.is_aligned() || ptr.is_null() || size == 0 {
+        if !ptr.is_aligned() || ptr.is_null() {
             return None;
         }
 

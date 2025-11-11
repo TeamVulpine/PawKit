@@ -1,12 +1,15 @@
 #pragma once
 
 #include "net.h"
+#include "util.h"
 
 #include <string_view>
 #include <string>
 #include <span>
 
 namespace PawKit::Networking {
+    using ChannelConfiguration = pawkit_net_channel_configuration_t;
+
     struct NetHostPeerEvent final {
         enum struct Type : pawkit_net_host_event_type_t {
             PeerConnected,
@@ -76,16 +79,16 @@ namespace PawKit::Networking {
             return reinterpret_cast<NetHostPeer *>(event);
         }
 
-        static NetHostPeer *New(std::string_view serverUrl, pawkit_u32 gameId, bool requestProxy) {
-            return From(pawkit_net_host_peer_create(serverUrl.data(), serverUrl.size(), gameId, requestProxy));
+        static NetHostPeer *New(std::string_view serverUrl, pawkit_u32 gameId, bool requestProxy, std::span<ChannelConfiguration> channels) {
+            return From(pawkit_net_host_peer_create(serverUrl.data(), serverUrl.size(), gameId, requestProxy, channels.data(), channels.size()));
         }
 
-        inline void SendPacket(pawkit_usize peerId, pawkit_u8 *data, pawkit_usize size) {
-            pawkit_net_host_peer_send_packet(*this, peerId, data, size);
+        inline void SendPacket(pawkit_usize peerId, pawkit_usize channel, pawkit_u8 *data, pawkit_usize size) {
+            pawkit_net_host_peer_send_packet(*this, peerId, channel, data, size);
         }
 
-        inline void SendPacket(pawkit_usize peerId, std::span<pawkit_u8> data) {
-            SendPacket(peerId, data.data(), data.size());
+        inline void SendPacket(pawkit_usize peerId, pawkit_usize channel, std::span<pawkit_u8> data) {
+            SendPacket(peerId, channel, data.data(), data.size());
         }
 
         inline NetHostPeerEvent *PollEvent() {
@@ -172,12 +175,12 @@ namespace PawKit::Networking {
             return From(pawkit_net_client_peer_create(hostId.data(), hostId.size(), gameId));
         }
 
-        inline void SendPacket(pawkit_u8 *data, pawkit_usize size) {
-            pawkit_net_client_peer_send_packet(*this, data, size);
+        inline void SendPacket(pawkit_usize channel, pawkit_u8 *data, pawkit_usize size) {
+            pawkit_net_client_peer_send_packet(*this, channel, data, size);
         }
 
-        inline void SendPacket(std::span<pawkit_u8> data) {
-            SendPacket(data.data(), data.size());
+        inline void SendPacket(pawkit_usize channel, std::span<pawkit_u8> data) {
+            SendPacket(channel, data.data(), data.size());
         }
 
         inline NetClientPeerEvent *PollEvent() {
