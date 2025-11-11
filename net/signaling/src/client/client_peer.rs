@@ -1,7 +1,7 @@
 use just_webrtc::types::{ICECandidate, SessionDescription};
 
 use crate::model::{
-    HostId,
+    ChannelConfiguration, HostId,
     c2s::{SignalMessageC2S, client_peer::ClientPeerMessageC2S},
     s2c::{SignalMessageS2C, client_peer::ClientPeerMessageS2C},
 };
@@ -54,5 +54,28 @@ impl ClientPeerSignalingClient {
         };
 
         return Some(HostConnectionCandidate { offer, candidates });
+    }
+
+    pub async fn channel_configurations(
+        &mut self,
+        host_id: HostId,
+    ) -> Option<Vec<ChannelConfiguration>> {
+        self.sock
+            .send(SignalMessageC2S::ClientPeer {
+                value: ClientPeerMessageC2S::RequestChannelConfigurations {
+                    host_id,
+                    game_id: self.game_id,
+                },
+            })
+            .await;
+
+        let SignalMessageS2C::ClientPeer {
+            value: ClientPeerMessageS2C::ChannelConfigurations(config),
+        } = self.sock.recv().await?
+        else {
+            return None;
+        };
+
+        return Some(config);
     }
 }

@@ -3,11 +3,16 @@
 ---@class pawkit.net
 local net = {}
 
+---@class ChannelConfiguration
+---@field ordered boolean
+---@field retries integer|nil
+
 ---@param server_url string
 ---@param game_id integer
 ---@param request_proxy boolean|nil
+---@param channels ChannelConfiguration[]
 ---@return pawkit.net.NetHostPeer
-function net.host(server_url, game_id, request_proxy)
+function net.host(server_url, game_id, request_proxy, channels)
 end
 
 ---@param game_id integer
@@ -36,8 +41,9 @@ net.client_events = {
 local NetHostPeer = {}
 
 ---@param peer_id integer
+---@param channel integer
 ---@param data string
-function NetHostPeer:send_packet(peer_id, data)
+function NetHostPeer:send_packet(peer_id, channel, data)
 end
 
 function NetHostPeer:shutdown()
@@ -70,7 +76,8 @@ end
 local NetClientPeer = {}
 
 ---@param data string
-function NetClientPeer:send_packet(data)
+---@param channel integer
+function NetClientPeer:send_packet(channel, data)
 end
 
 function NetClientPeer:disconnect()

@@ -2,7 +2,7 @@ use super::socket::ClientSocket;
 use just_webrtc::types::{ICECandidate, SessionDescription};
 
 use crate::model::{
-    HostId,
+    ChannelConfiguration, HostId,
     c2s::{SignalMessageC2S, host_peer::HostPeerMessageC2S},
     s2c::{SignalMessageS2C, host_peer::HostPeerMessageS2C},
 };
@@ -19,13 +19,19 @@ pub struct ClientConnectionCandidate {
 }
 
 impl HostPeerSignalingClient {
-    pub async fn new(server_url: &str, game_id: u32, request_proxy: bool) -> Option<Self> {
+    pub async fn new(
+        server_url: &str,
+        game_id: u32,
+        request_proxy: bool,
+        channel_configurations: Vec<ChannelConfiguration>,
+    ) -> Option<Self> {
         let mut sock = ClientSocket::open(server_url, crate::SendMode::Cbor).await?;
 
         sock.send(SignalMessageC2S::HostPeer {
             value: HostPeerMessageC2S::Register {
                 game_id,
                 request_proxy,
+                channel_configurations,
             },
         })
         .await;

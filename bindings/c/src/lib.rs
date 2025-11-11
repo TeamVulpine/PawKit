@@ -86,6 +86,10 @@ unsafe fn move_to_stack<T>(ptr: *mut T) -> Option<T> {
 
 unsafe fn ptr_to_slice_mut<'a, T>(ptr: *mut T, size: usize) -> Option<&'a mut [T]> {
     unsafe {
+        if size == 0 {
+            return Some(&mut []);
+        }
+
         if !ptr.is_aligned() || ptr.is_null() || size == 0 {
             return None;
         }
@@ -96,6 +100,10 @@ unsafe fn ptr_to_slice_mut<'a, T>(ptr: *mut T, size: usize) -> Option<&'a mut [T
 
 unsafe fn ptr_to_slice<'a, T>(ptr: *const T, size: usize) -> Option<&'a [T]> {
     unsafe {
+        if size == 0 {
+            return Some(&[]);
+        }
+
         if !ptr.is_aligned() || ptr.is_null() || size == 0 {
             return None;
         }
@@ -183,7 +191,7 @@ unsafe fn cstr_to_str<'a>(cstr: *const c_char, len: usize) -> Option<&'a str> {
         return None;
     }
 
-    let bytes = unsafe { slice::from_raw_parts(cstr as *const u8, len) };
+    let bytes = unsafe { ptr_to_slice(cstr as *const u8, len)? };
 
     return std::str::from_utf8(bytes).ok();
 }

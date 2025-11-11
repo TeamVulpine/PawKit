@@ -1,6 +1,8 @@
 use just_webrtc::types::{ICECandidate, SessionDescription};
 use serde::{Deserialize, Serialize};
 
+use crate::model::ChannelConfiguration;
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum HostPeerMessageC2S {
@@ -13,6 +15,7 @@ pub enum HostPeerMessageC2S {
         ///
         /// Requesting a proxy does not guarantee you get one.
         request_proxy: bool,
+        channel_configurations: Vec<ChannelConfiguration>,
     },
     AcceptConnection {
         offer: SessionDescription,

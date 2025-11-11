@@ -35,8 +35,8 @@ impl PawkitNetClientPeer {
     }
 
     #[func]
-    fn send_packet(&self, data: PackedByteArray) {
-        self.peer.send_packet(data.as_slice());
+    fn send_packet(&self, channel: i64, data: PackedByteArray) {
+        self.peer.send_packet(channel as usize, data.as_slice());
     }
 
     #[func]
@@ -67,6 +67,8 @@ struct PawkitNetClientPeerEvent {
     event_type: PawkitNetClientPeerEventType,
     #[export]
     data: PackedByteArray,
+    #[export]
+    channel: i64,
 }
 
 #[godot_api]
@@ -81,25 +83,33 @@ impl PawkitNetClientPeerEvent {
     const PACKET_RECIEVED: i32 = PawkitNetClientPeerEventType::PacketReceived as i32;
 
     fn new(ev: NetClientPeerEvent) -> Gd<Self> {
-        let (event_type, data) = match ev {
+        let (event_type, data, channel) = match ev {
             NetClientPeerEvent::Connected => (
                 PawkitNetClientPeerEventType::Connected,
                 PackedByteArray::new(),
+                0,
             ),
             NetClientPeerEvent::Disconnected => (
                 PawkitNetClientPeerEventType::Disconnected,
                 PackedByteArray::new(),
+                0,
             ),
             NetClientPeerEvent::ConnectionFailed => (
                 PawkitNetClientPeerEventType::ConnectionFailed,
                 PackedByteArray::new(),
+                0,
             ),
-            NetClientPeerEvent::PacketReceived { data } => (
+            NetClientPeerEvent::PacketReceived { data, channel } => (
                 PawkitNetClientPeerEventType::PacketReceived,
                 PackedByteArray::from(data.deref()),
+                channel as i64,
             ),
         };
 
-        return Gd::from_init_fn(|_| Self { event_type, data });
+        return Gd::from_init_fn(|_| Self {
+            event_type,
+            data,
+            channel,
+        });
     }
 }

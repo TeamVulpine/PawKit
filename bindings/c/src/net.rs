@@ -5,12 +5,32 @@ use std::{
 };
 
 use pawkit_net::{NetClientPeerEvent, NetHostPeerEvent, SimpleNetClientPeer, SimpleNetHostPeer};
-use pawkit_net_signaling::model::HostId;
+use pawkit_net_signaling::model::{ChannelConfiguration, HostId};
 
 use crate::{
     c_enum, cstr_to_str, disown_str_to_cstr, drop_from_heap, move_to_heap, ptr_to_ref,
     ptr_to_ref_mut, ptr_to_slice,
 };
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+struct CChannelConfig {
+    ordered: bool,
+    retries: u16,
+}
+
+impl Into<ChannelConfiguration> for CChannelConfig {
+    fn into(self) -> ChannelConfiguration {
+        return ChannelConfiguration {
+            ordered: self.ordered,
+            reliability: if self.retries == u16::MAX {
+                None
+            } else {
+                Some(self.retries.try_into().unwrap())
+            },
+        };
+    }
+}
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn pawkit_net_host_peer_create(
@@ -18,9 +38,15 @@ unsafe extern "C" fn pawkit_net_host_peer_create(
     server_url_len: usize,
     game_id: u32,
     request_proxy: bool,
+    channels: *const CChannelConfig,
+    channels_size: usize,
 ) -> *mut SimpleNetHostPeer {
     unsafe {
         let Some(server_url) = cstr_to_str(server_url, server_url_len) else {
+            return null_mut();
+        };
+
+        let Some(channels) = ptr_to_slice(channels, channels_size) else {
             return null_mut();
         };
 
@@ -28,6 +54,10 @@ unsafe extern "C" fn pawkit_net_host_peer_create(
             server_url,
             game_id,
             request_proxy,
+            channels
+                .iter()
+                .map(|config: &CChannelConfig| CChannelConfig::into(*config))
+                .collect(),
         ));
     }
 }
@@ -67,6 +97,7 @@ unsafe extern "C" fn pawkit_net_host_peer_get_host_id(
 unsafe extern "C" fn pawkit_net_host_peer_send_packet(
     peer: *mut SimpleNetHostPeer,
     client_id: usize,
+    channel: usize,
     data: *const u8,
     size: usize,
 ) {
@@ -79,7 +110,7 @@ unsafe extern "C" fn pawkit_net_host_peer_send_packet(
             return;
         };
 
-        peer.send_packet(client_id, data);
+        peer.send_packet(client_id, channel, data);
     }
 }
 
@@ -133,6 +164,7 @@ unsafe extern "C" fn pawkit_net_host_event_get_type(
             NetHostPeerEvent::PacketReceived {
                 peer_id: _,
                 data: _,
+                channel: _,
             } => HOST_PACKET_RECEIVED,
             NetHostPeerEvent::HostIdUpdated => HOST_ID_UPDATED,
         };
@@ -149,7 +181,11 @@ unsafe extern "C" fn pawkit_net_host_event_get_peer_id(evt: *mut NetHostPeerEven
         return match &*evt {
             NetHostPeerEvent::PeerConnected { peer_id } => *peer_id,
             NetHostPeerEvent::PeerDisconnected { peer_id } => *peer_id,
-            NetHostPeerEvent::PacketReceived { peer_id, data: _ } => *peer_id,
+            NetHostPeerEvent::PacketReceived {
+                peer_id,
+                data: _,
+                channel: _,
+            } => *peer_id,
             NetHostPeerEvent::HostIdUpdated => usize::MAX,
         };
     }
@@ -165,7 +201,12 @@ unsafe extern "C" fn pawkit_net_host_event_get_data(
             return null();
         }
 
-        let NetHostPeerEvent::PacketReceived { peer_id: _, data } = &*evt else {
+        let NetHostPeerEvent::PacketReceived {
+            peer_id: _,
+            data,
+            channel: _,
+        } = &*evt
+        else {
             return null();
         };
 
@@ -208,6 +249,7 @@ unsafe extern "C" fn pawkit_net_client_peer_free(peer: *mut SimpleNetClientPeer)
 #[unsafe(no_mangle)]
 unsafe extern "C" fn pawkit_net_client_peer_send_packet(
     peer: *mut SimpleNetClientPeer,
+    channel: usize,
     data: *const u8,
     size: usize,
 ) {
@@ -220,7 +262,7 @@ unsafe extern "C" fn pawkit_net_client_peer_send_packet(
             return;
         };
 
-        peer.send_packet(data);
+        peer.send_packet(channel, data);
     }
 }
 
@@ -261,7 +303,10 @@ unsafe extern "C" fn pawkit_net_client_event_get_type(
             NetClientPeerEvent::Connected => CLIENT_CONNECTED,
             NetClientPeerEvent::Disconnected => CLIENT_DISCONNECTED,
             NetClientPeerEvent::ConnectionFailed => CLIENT_CONNECTION_FAILED,
-            NetClientPeerEvent::PacketReceived { data: _ } => CLIENT_PACKET_RECEIVED,
+            NetClientPeerEvent::PacketReceived {
+                data: _,
+                channel: _,
+            } => CLIENT_PACKET_RECEIVED,
         };
     }
 }
@@ -276,7 +321,7 @@ unsafe extern "C" fn pawkit_net_client_event_get_data(
             return null();
         }
 
-        let NetClientPeerEvent::PacketReceived { data } = &*evt else {
+        let NetClientPeerEvent::PacketReceived { data, channel: _ } = &*evt else {
             return null();
         };
 

@@ -26,7 +26,7 @@ use tokio_native_tls::{
 use tokio_tungstenite::{MaybeTlsStream, accept_async};
 
 use crate::model::{
-    HostId, SignalingError,
+    ChannelConfiguration, HostId, SignalingError,
     c2s::{SignalMessageC2S, client_peer::ClientPeerMessageC2S, host_peer::HostPeerMessageC2S},
     s2c::{SignalMessageS2C, client_peer::ClientPeerMessageS2C, host_peer::HostPeerMessageS2C},
 };
@@ -39,6 +39,12 @@ struct PackedGameLobby {
     pub lobby_id: u32,
 }
 
+#[derive(Clone)]
+struct HostLobby(
+    UnboundedSender<HostPeerMessageS2C>,
+    Vec<ChannelConfiguration>,
+);
+
 /// A simple signaling server.
 /// Has support for TLS using the env vars PAWKIT_SIGNALING_TLS_PATH and PAWKIT_SIGNALING_TLS_PASS
 ///
@@ -50,7 +56,7 @@ pub struct SimpleSignalingServer {
     listener: TcpListener,
     tls_acceptor: Option<TlsAcceptor>,
     server_url: String,
-    host_peers: RwLock<HashMap<PackedGameLobby, UnboundedSender<HostPeerMessageS2C>>>,
+    host_peers: RwLock<HashMap<PackedGameLobby, HostLobby>>,
     client_peers: RwLock<HolyArray<UnboundedSender<ClientPeerMessageS2C>>>,
 }
 
@@ -96,7 +102,12 @@ impl SimpleSignalingServer {
         }));
     }
 
-    async fn acquire_lobby(&self, game_id: u32, send: UnboundedSender<HostPeerMessageS2C>) -> u32 {
+    async fn acquire_lobby(
+        &self,
+        game_id: u32,
+        send: UnboundedSender<HostPeerMessageS2C>,
+        channel_configurations: Vec<ChannelConfiguration>,
+    ) -> u32 {
         let mut peers = self.host_peers.write().await;
 
         let lobby = loop {
@@ -109,7 +120,7 @@ impl SimpleSignalingServer {
             }
         };
 
-        peers.insert(lobby, send);
+        peers.insert(lobby, HostLobby(send, channel_configurations));
 
         return lobby.lobby_id;
     }
@@ -120,11 +131,7 @@ impl SimpleSignalingServer {
         peers.remove(&PackedGameLobby { game_id, lobby_id });
     }
 
-    async fn get_lobby(
-        &self,
-        game_id: u32,
-        lobby_id: u32,
-    ) -> Option<UnboundedSender<HostPeerMessageS2C>> {
+    async fn get_lobby(&self, game_id: u32, lobby_id: u32) -> Option<HostLobby> {
         let peers = self.host_peers.read().await;
 
         let Some(peer) = peers.get(&PackedGameLobby { game_id, lobby_id }) else {
@@ -162,10 +169,17 @@ impl SimpleSignalingServer {
         return Ok(Some(peer.clone()));
     }
 
-    async fn host_peer(&self, mut socket: ServerSocket, game_id: u32) {
+    async fn host_peer(
+        &self,
+        mut socket: ServerSocket,
+        game_id: u32,
+        channel_configurations: Vec<ChannelConfiguration>,
+    ) {
         let (send, mut recv) = mpsc::unbounded_channel::<HostPeerMessageS2C>();
 
-        let lobby_id = self.acquire_lobby(game_id, send).await;
+        let lobby_id = self
+            .acquire_lobby(game_id, send, channel_configurations)
+            .await;
 
         let host_id = HostId {
             server_url: self.server_url.clone(),
@@ -187,7 +201,7 @@ impl SimpleSignalingServer {
             .await;
 
         while socket.is_open() {
-            pawkit_futures::select! {
+            tokio::select! {
                 Some(msg) = socket.recv() => {
                     match msg {
                         SignalMessageC2S::HostPeer {
@@ -300,6 +314,30 @@ impl SimpleSignalingServer {
         self.release_lobby(game_id, lobby_id).await;
     }
 
+    async fn channel_configurations(
+        &self,
+        mut socket: ServerSocket,
+        game_id: u32,
+        host_id: HostId,
+    ) {
+        let peer = self.get_lobby(game_id, host_id.lobby_id).await;
+
+        let Some(peer) = peer else {
+            socket
+                .send(SignalMessageS2C::Error {
+                    value: SignalingError::UnknownHostId,
+                })
+                .await;
+            return;
+        };
+
+        socket
+            .send(SignalMessageS2C::ClientPeer {
+                value: ClientPeerMessageS2C::ChannelConfigurations(peer.1),
+            })
+            .await;
+    }
+
     async fn client_peer(
         &self,
         mut socket: ServerSocket,
@@ -324,7 +362,7 @@ impl SimpleSignalingServer {
             return;
         };
 
-        if let Err(err) = peer.send(HostPeerMessageS2C::ConnectionRequested {
+        if let Err(err) = peer.0.send(HostPeerMessageS2C::ConnectionRequested {
             offer,
             candidates,
             client_id,
@@ -372,9 +410,17 @@ impl SimpleSignalingServer {
                     HostPeerMessageC2S::Register {
                         game_id,
                         request_proxy: _,
+                        channel_configurations,
                     },
             } => {
-                self.host_peer(socket, game_id).await;
+                self.host_peer(socket, game_id, channel_configurations)
+                    .await;
+            }
+
+            SignalMessageC2S::ClientPeer {
+                value: ClientPeerMessageC2S::RequestChannelConfigurations { host_id, game_id },
+            } => {
+                self.channel_configurations(socket, game_id, host_id).await;
             }
 
             SignalMessageC2S::ClientPeer {
@@ -419,7 +465,7 @@ impl SimpleSignalingServer {
     pub async fn start(self: Arc<Self>) {
         while let Ok((stream, _)) = self.listener.accept().await {
             let cloned = self.clone();
-            pawkit_futures::spawn(async move {
+            tokio::spawn(async move {
                 let Some(stream) = cloned.accept_stream(stream).await else {
                     pawkit_logger::error("Unable to accept stream.");
                     return;

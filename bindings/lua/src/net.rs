@@ -32,9 +32,14 @@ pub(crate) fn init(lua: &Lua) -> LuaResult<LuaTable> {
     return Ok(exports);
 }
 
-fn host(_lua: &Lua, args: (String, u32, Option<bool>)) -> LuaResult<LuaNetHostPeer> {
+fn host(lua: &Lua, args: (String, u32, Option<bool>, LuaValue)) -> LuaResult<LuaNetHostPeer> {
     return Ok(LuaNetHostPeer {
-        peer: SimpleNetHostPeer::create(&args.0, args.1, args.2.unwrap_or(false)),
+        peer: SimpleNetHostPeer::create(
+            &args.0,
+            args.1,
+            args.2.unwrap_or(false),
+            lua.from_value(args.3)?,
+        ),
     });
 }
 
@@ -56,8 +61,8 @@ pub struct LuaNetHostPeer {
 }
 
 impl LuaNetHostPeer {
-    fn send_packet(_lua: &Lua, this: &Self, args: (usize, LuaString)) -> LuaResult<()> {
-        this.peer.send_packet(args.0, &args.1.as_bytes());
+    fn send_packet(_lua: &Lua, this: &Self, args: (usize, usize, LuaString)) -> LuaResult<()> {
+        this.peer.send_packet(args.0, args.1, &args.2.as_bytes());
 
         return Ok(());
     }
@@ -111,6 +116,7 @@ impl LuaNetHostPeerEvent {
             NetHostPeerEvent::PacketReceived {
                 peer_id: _,
                 data: _,
+                channel: _,
             } => Self::PACKET_RECEIVED,
             NetHostPeerEvent::HostIdUpdated => Self::HOST_ID_UPDATED,
         });
@@ -120,17 +126,39 @@ impl LuaNetHostPeerEvent {
         return Ok(match this.evt {
             NetHostPeerEvent::PeerConnected { peer_id } => Some(peer_id),
             NetHostPeerEvent::PeerDisconnected { peer_id } => Some(peer_id),
-            NetHostPeerEvent::PacketReceived { peer_id, data: _ } => Some(peer_id),
+            NetHostPeerEvent::PacketReceived {
+                peer_id,
+                data: _,
+                channel: _,
+            } => Some(peer_id),
             NetHostPeerEvent::HostIdUpdated => None,
         });
     }
 
     fn get_data(lua: &Lua, this: &Self, _args: ()) -> LuaResult<Option<LuaString>> {
-        let NetHostPeerEvent::PacketReceived { peer_id: _, data } = &this.evt else {
+        let NetHostPeerEvent::PacketReceived {
+            peer_id: _,
+            data,
+            channel: _,
+        } = &this.evt
+        else {
             return Ok(None);
         };
 
         return Ok(Some(lua.create_string(data)?));
+    }
+
+    fn get_channel(_lua: &Lua, this: &Self, _args: ()) -> LuaResult<Option<usize>> {
+        let NetHostPeerEvent::PacketReceived {
+            peer_id: _,
+            data: _,
+            channel,
+        } = &this.evt
+        else {
+            return Ok(None);
+        };
+
+        return Ok(Some(*channel));
     }
 }
 
@@ -139,6 +167,7 @@ impl LuaUserData for LuaNetHostPeerEvent {
         methods.add_method("get_type", Self::get_type);
         methods.add_method("get_peer_id", Self::get_peer_id);
         methods.add_method("get_data", Self::get_data);
+        methods.add_method("get_channel", Self::get_channel);
     }
 }
 
@@ -147,8 +176,8 @@ pub struct LuaNetClientPeer {
 }
 
 impl LuaNetClientPeer {
-    fn send_packet(_lua: &Lua, this: &Self, data: LuaString) -> LuaResult<()> {
-        this.peer.send_packet(&data.as_bytes());
+    fn send_packet(_lua: &Lua, this: &Self, args: (usize, LuaString)) -> LuaResult<()> {
+        this.peer.send_packet(args.0, &args.1.as_bytes());
 
         return Ok(());
     }
@@ -195,12 +224,15 @@ impl LuaNetClientPeerEvent {
             NetClientPeerEvent::Connected => Self::CONNECTED,
             NetClientPeerEvent::Disconnected => Self::DISCONNECTED,
             NetClientPeerEvent::ConnectionFailed => Self::CONNECTION_FAILED,
-            NetClientPeerEvent::PacketReceived { data: _ } => Self::PACKET_RECEIVED,
+            NetClientPeerEvent::PacketReceived {
+                data: _,
+                channel: _,
+            } => Self::PACKET_RECEIVED,
         });
     }
 
     fn get_data(lua: &Lua, this: &Self, _args: ()) -> LuaResult<Option<LuaString>> {
-        let NetClientPeerEvent::PacketReceived { data } = &this.evt else {
+        let NetClientPeerEvent::PacketReceived { data, channel: _ } = &this.evt else {
             return Ok(None);
         };
 

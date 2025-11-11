@@ -15,7 +15,6 @@ pawkit-net-websocket.workspace = true
 pawkit-holy-array.workspace = true
 pawkit-logger.workspace = true
 pawkit-crockford.workspace = true
-pawkit-futures.workspace = true
 
 serde.workspace = true
 tokio.workspace = true

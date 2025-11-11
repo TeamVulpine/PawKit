@@ -19,19 +19,20 @@ struct PawkitNetHostPeer {
 impl PawkitNetHostPeer {
     #[func]
     fn new(server_url: GString, game_id: u32) -> Gd<Self> {
-        let (peer, recv) = NetHostPeer::create(&server_url.to_string(), game_id, false);
+        let (peer, recv) = NetHostPeer::create(&server_url.to_string(), game_id, false, vec![]);
 
         return Gd::from_init_fn(|_| Self { peer, recv });
     }
 
     #[func]
     fn host_id(&self) -> GString {
-        return self.peer.get_host_id().to_string().into();
+        return (&self.peer.get_host_id().to_string()).into();
     }
 
     #[func]
-    fn send_packet(&self, client_id: i64, data: PackedByteArray) {
-        self.peer.send_packet(client_id as usize, data.as_slice());
+    fn send_packet(&self, client_id: i64, channel: i64, data: PackedByteArray) {
+        self.peer
+            .send_packet(client_id as usize, channel as usize, data.as_slice());
     }
 
     #[func]
@@ -64,6 +65,8 @@ struct PawkitNetHostPeerEvent {
     peer_id: i64,
     #[export]
     data: PackedByteArray,
+    #[export]
+    channel: i64,
 }
 
 #[godot_api]
@@ -78,26 +81,34 @@ impl PawkitNetHostPeerEvent {
     const PACKET_RECIEVED: i32 = PawkitNetHostPeerEventType::HostIdUpdated as i32;
 
     fn new(ev: NetHostPeerEvent) -> Gd<Self> {
-        let (event_type, peer_id, data) = match ev {
+        let (event_type, peer_id, data, channel) = match ev {
             NetHostPeerEvent::HostIdUpdated => (
                 PawkitNetHostPeerEventType::HostIdUpdated,
                 0,
                 PackedByteArray::new(),
+                0,
             ),
             NetHostPeerEvent::PeerConnected { peer_id } => (
                 PawkitNetHostPeerEventType::PeerConnected,
                 peer_id as i64,
                 PackedByteArray::new(),
+                0,
             ),
             NetHostPeerEvent::PeerDisconnected { peer_id } => (
                 PawkitNetHostPeerEventType::PeerDisconnected,
                 peer_id as i64,
                 PackedByteArray::new(),
+                0,
             ),
-            NetHostPeerEvent::PacketReceived { peer_id, data } => (
+            NetHostPeerEvent::PacketReceived {
+                peer_id,
+                data,
+                channel,
+            } => (
                 PawkitNetHostPeerEventType::PacketReceived,
                 peer_id as i64,
                 PackedByteArray::from(data.deref()),
+                channel as i64,
             ),
         };
 
@@ -105,6 +116,7 @@ impl PawkitNetHostPeerEvent {
             event_type,
             peer_id,
             data,
+            channel,
         });
     }
 }

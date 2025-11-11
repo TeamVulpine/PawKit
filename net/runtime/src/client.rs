@@ -8,15 +8,19 @@ use std::{
 
 use bytes::Bytes;
 use just_webrtc::{
-    DataChannelExt, PeerConnectionExt, SimpleLocalPeerConnection, types::PeerConnectionState,
+    DataChannelExt, PeerConnectionBuilder, PeerConnectionExt,
+    types::{DataChannelOptions, PeerConnectionState},
 };
-use pawkit_net_signaling::{client::ClientPeerSignalingClient, model::HostId};
+use pawkit_net_signaling::{
+    client::ClientPeerSignalingClient,
+    model::{ChannelConfiguration, HostId},
+};
 use tokio::sync::{
     RwLock,
     mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel},
 };
 
-use crate::{Connection, recieve_packet};
+use crate::{Connection, RUNTIME, receive_packets};
 
 pub struct NetClientPeer {
     connection: RwLock<Option<Connection>>,
@@ -31,7 +35,7 @@ pub enum NetClientPeerEvent {
     Connected,
     Disconnected,
     ConnectionFailed,
-    PacketReceived { data: Vec<u8> },
+    PacketReceived { channel: usize, data: Vec<u8> },
 }
 
 impl NetClientPeer {
@@ -54,19 +58,44 @@ impl NetClientPeer {
         (peer, ev_queue)
     }
 
-    pub fn send_packet(&self, data: &[u8]) {
+    pub fn send_packet(&self, channel: usize, data: &[u8]) {
         let conn = self.connection.blocking_read();
 
         if let Some(conn) = &*conn {
-            let _ = pawkit_futures::block_on(conn.channel.send(&Bytes::copy_from_slice(data)));
+            let _ = RUNTIME.block_on(conn.channels[channel].send(&Bytes::copy_from_slice(data)));
         }
+    }
+
+    fn channel_config_to_option(config: &ChannelConfiguration) -> DataChannelOptions {
+        return DataChannelOptions {
+            ordered: Some(config.ordered),
+            max_retransmits: config.reliability,
+
+            ..Default::default()
+        };
     }
 
     async fn connect_to_host(&self) -> Option<Connection> {
         let mut signaling =
             ClientPeerSignalingClient::new(&self.host_id.server_url, self.game_id).await?;
 
-        let connection = SimpleLocalPeerConnection::build(true).await.ok()?;
+        let configurations = signaling
+            .channel_configurations(self.host_id.clone())
+            .await?;
+
+        let channel_options = configurations
+            .iter()
+            .map(|it| ("pawkit_".to_string(), Self::channel_config_to_option(it)))
+            .collect::<Vec<_>>();
+
+        let channels = channel_options.len();
+
+        let connection = PeerConnectionBuilder::new()
+            .with_channel_options(channel_options)
+            .unwrap()
+            .build()
+            .await
+            .ok()?;
 
         let offer = connection.get_local_description().await?;
         let candidates = connection.collect_ice_candidates().await.ok()?;
@@ -82,7 +111,7 @@ impl NetClientPeer {
         let _ = connection.add_ice_candidates(candidate.candidates).await;
 
         if let PeerConnectionState::Connected = connection.state_change().await {
-            return Connection::from(connection).await.ok();
+            return Connection::from(connection, channels).await.ok();
         }
 
         None
@@ -109,11 +138,11 @@ impl NetClientPeer {
                 break;
             };
 
-            pawkit_futures::select! {
-                Some(packet) = recieve_packet(&connection.channel) => {
+            tokio::select! {
+                Some((channel, data)) = receive_packets(&connection.channels) => {
                     let _ = self
                         .ev_dispatcher
-                        .send(NetClientPeerEvent::PacketReceived { data: packet });
+                        .send(NetClientPeerEvent::PacketReceived { channel, data });
                 }
 
                 PeerConnectionState::Disconnected = connection.raw_connection.state_change() => {
@@ -134,7 +163,7 @@ impl NetClientPeer {
     }
 
     fn spawn_worker(self: Arc<Self>) {
-        pawkit_futures::spawn(async move {
+        tokio::spawn(async move {
             self.worker_loop().await;
         });
     }

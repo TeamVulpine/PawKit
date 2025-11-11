@@ -1,11 +1,21 @@
 #pragma once
 
 #include <assert.h>
+#include <cstdint>
 #include "util.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+enum {
+    PAWKIT_NET_RETRY_ALWAYS = UINT16_MAX,
+};
+
+typedef struct pawkit_net_channel_configuration {
+    bool ordered;
+    pawkit_u16 retries;
+} pawkit_net_channel_configuration_t;
 
 typedef struct pawkit_net_host_peer *pawkit_net_host_peer_t;
 
@@ -20,12 +30,12 @@ enum {
 
 typedef pawkit_u8 pawkit_net_host_event_type_t;
 
-pawkit_net_host_peer_t pawkit_net_host_peer_create(char const *server_url, pawkit_usize server_url_size, pawkit_u32 game_id, bool request_proxy);
+pawkit_net_host_peer_t pawkit_net_host_peer_create(char const *server_url, pawkit_usize server_url_size, pawkit_u32 game_id, bool request_proxy, pawkit_net_channel_configuration_t *channels, pawkit_usize channels_size);
 void pawkit_net_host_peer_free(pawkit_net_host_peer_t peer);
 
 char const *pawkit_net_host_peer_get_host_id(pawkit_net_host_peer_t peer, pawkit_usize *size);
 
-void pawkit_net_host_peer_send_packet(pawkit_net_host_peer_t peer, pawkit_usize peer_id, pawkit_u8 *data, pawkit_usize size);
+void pawkit_net_host_peer_send_packet(pawkit_net_host_peer_t peer, pawkit_usize peer_id, pawkit_usize channel, pawkit_u8 *data, pawkit_usize size);
 
 pawkit_net_host_event_t pawkit_net_host_peer_poll_event(pawkit_net_host_peer_t peer);
 void pawkit_net_host_event_free(pawkit_net_host_event_t evt);
@@ -51,7 +61,7 @@ typedef pawkit_u8 pawkit_net_client_event_type_t;
 pawkit_net_client_peer_t pawkit_net_client_peer_create(char const *host_id, pawkit_usize host_id_size, pawkit_u32 game_id);
 void pawkit_net_client_peer_free(pawkit_net_client_peer_t peer);
 
-void pawkit_net_client_peer_send_packet(pawkit_net_client_peer_t peer, pawkit_u8 *data, pawkit_usize size);
+void pawkit_net_client_peer_send_packet(pawkit_net_client_peer_t peer, pawkit_usize channel, pawkit_u8 *data, pawkit_usize size);
 
 pawkit_net_client_event_t pawkit_net_client_peer_poll_event(pawkit_net_client_peer_t peer);
 void pawkit_net_client_event_free(pawkit_net_client_event_t evt);
