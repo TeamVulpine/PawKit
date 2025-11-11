@@ -61,3 +61,7 @@ pub fn error(message: &str) {
 pub fn fatal(message: &str) {
     log_badge!((reset, fg_red, bold), "[FATAL]", (), message, (reset));
 }
+
+pub macro log($f:ident, $first:literal $(, $rest:expr)*) {
+    $crate::$f(&format!($first $(, $rest)*));
+}
