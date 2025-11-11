@@ -3,6 +3,8 @@ mod host;
 
 use std::{future::Future, sync::LazyLock};
 
+pub use pawkit_net_signaling as signaling;
+
 pub use client::*;
 use futures_util::{FutureExt, future::select_all};
 pub use host::*;

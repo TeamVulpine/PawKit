@@ -2,16 +2,16 @@
 set -euo pipefail
 
 # Usage:
-#   ./publish.bash -p | --update     # update versions only
-#   ./publish.bash -r | --release    # update + cargo publish
+#   ./publish.bash -u | --update     # update versions
+#   ./publish.bash -r | --release    # cargo publish
 
 if [[ $# -ne 1 ]]; then
-    echo "Usage: $0 [-p|--update] [-r|--release]"
+    echo "Usage: $0 [-u|--update] [-r|--release]"
     exit 1
 fi
 
 MODE="$1"
-VERSION="0.1.3"
+VERSION="0.1.4"
 WORKSPACE_TOML="Cargo.toml"
 
 # Ordered crate list
@@ -29,6 +29,7 @@ CRATES=(
   "pawkit-bindings-c:bindings/c"
   "pawkit-bindings-lua:bindings/lua"
   "pawkit-bindings-godot:bindings/godot"
+  "pawkit:."
 )
 
 # Crates to exclude from publishing only
@@ -88,14 +89,13 @@ run_release() {
     for entry in "${CRATES[@]}"; do
         IFS=":" read -r name path <<< "$entry"
         [[ -f "$path/Cargo.toml" ]] || { echo "Skipping $name (no Cargo.toml)"; continue; }
-        update_crate_version "$name" "$path"
         publish_crate "$name" "$path"
     done
     echo "Release complete."
 }
 
 case "$MODE" in
-  -p|--update)
+  -u|--update)
     run_update
     ;;
   -r|--release)
@@ -103,7 +103,7 @@ case "$MODE" in
     ;;
   *)
     echo "Invalid argument: $MODE"
-    echo "Usage: $0 [-p|--update] [-r|--release]"
+    echo "Usage: $0 [-u|--update] [-r|--release]"
     exit 1
     ;;
 esac
