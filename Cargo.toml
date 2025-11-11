@@ -20,37 +20,37 @@ members = [
 
 [workspace.dependencies]
 pawkit-futures.path = "./futures"
-pawkit-futures.version = "0.1.2"
+pawkit-futures.version = "0.1.3"
 
 pawkit-net-signaling.path = "./net/signaling"
-pawkit-net-signaling.version = "0.1.2"
+pawkit-net-signaling.version = "0.1.3"
 
 pawkit-net-websocket.path = "./net/websocket"
-pawkit-net-websocket.version = "0.1.2"
+pawkit-net-websocket.version = "0.1.3"
 
 pawkit-net.path = "./net/runtime"
-pawkit-net.version = "0.1.2"
+pawkit-net.version = "0.1.3"
 
 pawkit-net-http.path = "./net/htp"
-pawkit-net-http.version = "0.1.2"
+pawkit-net-http.version = "0.1.3"
 
 pawkit-logger.path = "./logger"
-pawkit-logger.version = "0.1.2"
+pawkit-logger.version = "0.1.3"
 
 pawkit-fs.path = "./fs"
-pawkit-fs.version = "0.1.2"
+pawkit-fs.version = "0.1.3"
 
 pawkit-crockford.path = "./crockford"
-pawkit-crockford.version = "0.1.2"
+pawkit-crockford.version = "0.1.3"
 
 pawkit-holy-array.path = "./holy-array"
-pawkit-holy-array.version = "0.1.2"
+pawkit-holy-array.version = "0.1.3"
 
 pawkit-bitarray.path = "./bitarray"
-pawkit-bitarray.version = "0.1.2"
+pawkit-bitarray.version = "0.1.3"
 
 pawkit-input.path = "./input"
-pawkit-input.version = "0.1.2"
+pawkit-input.version = "0.1.3"
 
 tokio-native-tls = "0.3.1"
 num_enum = "0.7.4"
