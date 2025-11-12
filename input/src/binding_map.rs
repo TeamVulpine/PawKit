@@ -1,33 +1,28 @@
 use std::{
     collections::HashMap,
-    error::Error,
-    fmt,
     sync::{Arc, RwLock},
 };
 
 use pawkit_holy_array::HolyArray;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 use crate::bindings::{
     AnalogBinding, DefaultBinding, DefaultBindingType, DigitalBinding, VectorBinding,
 };
 
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Error, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum BindingMapError {
+    #[error("The requested key already exists")]
     KeyAlreadyExists,
+    #[error("Bindings updated while locked")]
     BindingUpdateWhileLocked,
+    #[error("Binding map instantiated while unlocked")]
     InstantiationWhileUnlocked,
+    #[error("Locking failed")]
     LockIssue,
 }
-
-impl fmt::Display for BindingMapError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        return write!(f, "{:?}", self);
-    }
-}
-
-impl Error for BindingMapError {}
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type", content = "bindings")]

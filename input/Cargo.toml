@@ -1,6 +1,6 @@
 [package]
 name = "pawkit-input"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2024"
 license = "MPL-2.0"
 homepage = "https://teamvulpine.com"
@@ -14,3 +14,4 @@ pawkit-holy-array.workspace = true
 num_enum.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+thiserror.workspace = true

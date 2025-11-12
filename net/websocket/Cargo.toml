@@ -1,6 +1,6 @@
 [package]
 name = "pawkit-net-websocket"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2024"
 license = "MPL-2.0"
 homepage = "https://teamvulpine.com"
@@ -11,6 +11,7 @@ description = "A websocket wrapper for PawKit"
 pawkit-logger.workspace = true
 tokio.workspace = true
 futures-util.workspace = true
+thiserror.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tokio-tungstenite.workspace = true

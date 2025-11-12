@@ -5,6 +5,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use thiserror::Error;
 use zip::{ZipArchive, result::ZipError};
 
 mod buffer;
@@ -22,24 +23,16 @@ pub use list_files_recursive::*;
 mod kind;
 use kind::*;
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum VfsError {
-    ZipError(ZipError),
-    IoError(io::Error),
+    #[error("Zip error: {0}")]
+    ZipError(#[from] ZipError),
+    #[error("IO error: {0}")]
+    IoError(#[from] io::Error),
+    #[error("File not found")]
     NotFound,
+    #[error("Unknown error")]
     Other,
-}
-
-impl From<io::Error> for VfsError {
-    fn from(value: io::Error) -> Self {
-        return Self::IoError(value);
-    }
-}
-
-impl From<ZipError> for VfsError {
-    fn from(value: ZipError) -> Self {
-        return Self::ZipError(value);
-    }
 }
 
 /// A virtual filesystem.
