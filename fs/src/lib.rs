@@ -29,8 +29,8 @@ pub enum VfsError {
     ZipError(#[from] ZipError),
     #[error("IO error: {0}")]
     IoError(#[from] io::Error),
-    #[error("File not found")]
-    NotFound,
+    #[error("File not found: {0}")]
+    NotFound(Arc<str>),
     #[error("Unknown error")]
     Other,
 }
@@ -77,7 +77,7 @@ impl Vfs {
         if let Some(dir) = &subdirectory
             && !kind.subdirectory_exists(dir)
         {
-            return Err(VfsError::NotFound);
+            return Err(VfsError::NotFound(dir.deref().into()));
         }
 
         return Ok(Self { kind, subdirectory });

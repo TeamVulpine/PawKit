@@ -11,7 +11,7 @@ if [[ $# -ne 1 ]]; then
 fi
 
 MODE="$1"
-VERSION="0.1.5"
+VERSION="0.1.6"
 WORKSPACE_TOML="Cargo.toml"
 
 # Ordered crate list

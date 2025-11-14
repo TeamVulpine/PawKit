@@ -1,12 +1,12 @@
 use std::{
     fs::{self, File},
-    io::Read,
+    io::{ErrorKind, Read},
     ops::Deref,
     path::Path,
     sync::{Arc, Mutex},
 };
 
-use zip::ZipArchive;
+use zip::{ZipArchive, result::ZipError};
 
 use crate::{VfsBuffer, VfsError};
 
@@ -51,8 +51,18 @@ impl VfsKind {
     pub(crate) fn open(&self, path: &str) -> Result<VfsBuffer, VfsError> {
         match self {
             VfsKind::Working => {
-                let path = Path::new(path);
-                return Ok(File::open(path)?.into());
+                let file_path = Path::new(path);
+
+                return Ok(match File::open(file_path) {
+                    Ok(it) => it.into(),
+                    Err(it) => {
+                        if let ErrorKind::NotFound = it.kind() {
+                            return Err(VfsError::NotFound(path.into()));
+                        }
+                        
+                        return Err(it.into());
+                    }
+                });
             }
 
             VfsKind::ZipArchive(zip) => {
@@ -60,7 +70,13 @@ impl VfsKind {
                     return Err(VfsError::Other);
                 };
 
-                let mut file = zip.by_name(path)?;
+                let mut file = match zip.by_name(path) {
+                    Ok(it) => it,
+                    Err(ZipError::FileNotFound) => {
+                        return Err(VfsError::NotFound(path.into()));
+                    },
+                    Err(it) => return Err(it.into()),
+                };
 
                 let mut buf = vec![];
                 file.read_to_end(&mut buf)?;

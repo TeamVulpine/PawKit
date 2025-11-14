@@ -25,7 +25,7 @@ c_enum!(CVfsError : u8 {
 fn vfs_error_to_c(error: VfsError) -> CVfsError {
     return match error {
         VfsError::IoError(_) | VfsError::ZipError(ZipError::Io(_)) => ERROR_IO,
-        VfsError::NotFound | VfsError::ZipError(ZipError::FileNotFound) => ERROR_NOT_FOUND,
+        VfsError::NotFound(_) | VfsError::ZipError(ZipError::FileNotFound) => ERROR_NOT_FOUND,
         VfsError::ZipError(_) => ERROR_ZIP,
         _ => ERROR_OTHER,
     };
