@@ -19,34 +19,34 @@ members = [
 
 [workspace.dependencies]
 pawkit-net-signaling.path = "./net/signaling"
-pawkit-net-signaling.version = "0.1.6"
+pawkit-net-signaling.version = "0.1.7"
 
 pawkit-net-websocket.path = "./net/websocket"
-pawkit-net-websocket.version = "0.1.6"
+pawkit-net-websocket.version = "0.1.7"
 
 pawkit-net.path = "./net/runtime"
-pawkit-net.version = "0.1.6"
+pawkit-net.version = "0.1.7"
 
 pawkit-net-http.path = "./net/htp"
-pawkit-net-http.version = "0.1.6"
+pawkit-net-http.version = "0.1.7"
 
 pawkit-logger.path = "./logger"
-pawkit-logger.version = "0.1.6"
+pawkit-logger.version = "0.1.7"
 
 pawkit-fs.path = "./fs"
-pawkit-fs.version = "0.1.6"
+pawkit-fs.version = "0.1.7"
 
 pawkit-crockford.path = "./crockford"
-pawkit-crockford.version = "0.1.6"
+pawkit-crockford.version = "0.1.7"
 
 pawkit-holy-array.path = "./holy-array"
-pawkit-holy-array.version = "0.1.6"
+pawkit-holy-array.version = "0.1.7"
 
 pawkit-bitarray.path = "./bitarray"
-pawkit-bitarray.version = "0.1.6"
+pawkit-bitarray.version = "0.1.7"
 
 pawkit-input.path = "./input"
-pawkit-input.version = "0.1.6"
+pawkit-input.version = "0.1.7"
 
 tokio-native-tls = "0.3.1"
 num_enum = "0.7.5"
@@ -99,7 +99,7 @@ mlua.features = ["lua54", "module", "serialize"]
 
 [package]
 name = "pawkit"
-version = "0.1.6"
+version = "0.1.7"
 edition = "2024"
 license = "MPL-2.0"
 homepage = "https://teamvulpine.com"
@@ -111,3 +111,15 @@ pawkit-logger.workspace = true
 pawkit-net.workspace = true
 pawkit-input.workspace = true
 pawkit-fs.workspace = true
+
+pawkit-crockford.workspace = true
+pawkit-crockford.optional = true
+
+pawkit-holy-array.workspace = true
+pawkit-holy-array.optional = true
+
+pawkit-bitarray.workspace = true
+pawkit-bitarray.optional = true
+
+[features]
+internal_libraries = ["pawkit-crockford", "pawkit-holy-array", "pawkit-bitarray"]
