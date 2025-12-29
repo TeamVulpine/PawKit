@@ -19,59 +19,59 @@ members = [
 
 [workspace.dependencies]
 pawkit-net-signaling.path = "./net/signaling"
-pawkit-net-signaling.version = "0.1.7"
+pawkit-net-signaling.version = "0.1.8"
 
 pawkit-net-websocket.path = "./net/websocket"
-pawkit-net-websocket.version = "0.1.7"
+pawkit-net-websocket.version = "0.1.8"
 
 pawkit-net.path = "./net/runtime"
-pawkit-net.version = "0.1.7"
+pawkit-net.version = "0.1.8"
 
 pawkit-net-http.path = "./net/htp"
-pawkit-net-http.version = "0.1.7"
+pawkit-net-http.version = "0.1.8"
 
 pawkit-logger.path = "./logger"
-pawkit-logger.version = "0.1.7"
+pawkit-logger.version = "0.1.8"
 
 pawkit-fs.path = "./fs"
-pawkit-fs.version = "0.1.7"
+pawkit-fs.version = "0.1.8"
 
 pawkit-crockford.path = "./crockford"
-pawkit-crockford.version = "0.1.7"
+pawkit-crockford.version = "0.1.8"
 
 pawkit-holy-array.path = "./holy-array"
-pawkit-holy-array.version = "0.1.7"
+pawkit-holy-array.version = "0.1.8"
 
 pawkit-bitarray.path = "./bitarray"
-pawkit-bitarray.version = "0.1.7"
+pawkit-bitarray.version = "0.1.8"
 
 pawkit-input.path = "./input"
-pawkit-input.version = "0.1.7"
+pawkit-input.version = "0.1.8"
 
 tokio-native-tls = "0.3.1"
 num_enum = "0.7.5"
 serde.version = "1.0.228"
 serde.features = ["serde_derive"]
 just-webrtc = "0.2.0"
-wasm-bindgen = "0.2.105"
-wasm-bindgen-futures = "0.4.55"
+wasm-bindgen = "0.2.106"
+wasm-bindgen-futures = "0.4.56"
 futures-util = "0.3.31"
 chrono = "0.4.42"
-serde_json = "1.0.145"
+serde_json = "1.0.148"
 ciborium = "0.2.2"
 anyhow = "1.0.100"
-bytes = "1.10.1"
-reqwest = "0.12.24"
-zip = "6.0.0"
+bytes = "1.11.0"
+reqwest = "0.12.28"
+zip = "7.0.0"
 thiserror = "2.0.17"
  
-godot.version = "0.4.2"
+godot.version = "0.4.5"
 godot.features = ["api-4-4", "serde"]
 
 tokio-tungstenite.version = "0.28.0"
 tokio-tungstenite.features = ["native-tls"]
 
-web-sys.version = "0.3.82"
+web-sys.version = "0.3.83"
 web-sys.features = [
   "BinaryType",
   "Blob",
@@ -94,12 +94,12 @@ web-sys.features = [
 tokio.version = "1.48.0"
 tokio.features = ["sync", "rt", "macros"]
 
-mlua.version = "0.11.4"
+mlua.version = "0.11.5"
 mlua.features = ["lua54", "module", "serialize"] 
 
 [package]
 name = "pawkit"
-version = "0.1.7"
+version = "0.1.8"
 edition = "2024"
 license = "MPL-2.0"
 homepage = "https://teamvulpine.com"
