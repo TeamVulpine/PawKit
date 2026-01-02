@@ -59,7 +59,7 @@ impl VfsKind {
                         if let ErrorKind::NotFound = it.kind() {
                             return Err(VfsError::NotFound(path.into()));
                         }
-                        
+
                         return Err(it.into());
                     }
                 });
@@ -74,7 +74,7 @@ impl VfsKind {
                     Ok(it) => it,
                     Err(ZipError::FileNotFound) => {
                         return Err(VfsError::NotFound(path.into()));
-                    },
+                    }
                     Err(it) => return Err(it.into()),
                 };
 

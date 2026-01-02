@@ -4,8 +4,8 @@ use std::{
     str::FromStr,
 };
 
-use pawkit_net::{NetClientPeerEvent, NetHostPeerEvent, SimpleNetClientPeer, SimpleNetHostPeer};
 use pawkit_net::signaling::model::{ChannelConfiguration, HostId};
+use pawkit_net::{NetClientPeerEvent, NetHostPeerEvent, SimpleNetClientPeer, SimpleNetHostPeer};
 
 use crate::{
     c_enum, cstr_to_str, disown_str_to_cstr, drop_from_heap, move_to_heap, ptr_to_ref,

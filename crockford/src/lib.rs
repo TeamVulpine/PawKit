@@ -82,9 +82,7 @@ macro impl_crockford($t:ty) {
 
             for c in value.chars() {
                 let digit = crockford_char_to_digit(c)?;
-                result = result
-                    .checked_mul(32)?
-                    .checked_add(digit as $t)?;
+                result = result.checked_mul(32)?.checked_add(digit as $t)?;
             }
 
             Some(result)

@@ -14,7 +14,7 @@ members = [
   "bitarray",
   "bindings/c",
   "bindings/lua",
-  "bindings/godot",
+  "bindings/godot", "interner",
 ]
 
 [workspace.dependencies]
@@ -48,6 +48,9 @@ pawkit-bitarray.version = "0.1.8"
 pawkit-input.path = "./input"
 pawkit-input.version = "0.1.8"
 
+pawkit-interner.path = "./interner"
+pawkit-interner.version = "0.1.8"
+
 tokio-native-tls = "0.3.1"
 num_enum = "0.7.5"
 serde.version = "1.0.228"
@@ -64,6 +67,7 @@ bytes = "1.11.0"
 reqwest = "0.12.28"
 zip = "7.0.0"
 thiserror = "2.0.17"
+dashmap = "6.1.0"
  
 godot.version = "0.4.5"
 godot.features = ["api-4-4", "serde"]
@@ -110,6 +114,7 @@ description = "PawKit is a mninimal game engine toolkit, written in Rust, with s
 pawkit-logger.workspace = true
 pawkit-net.workspace = true
 pawkit-input.workspace = true
+pawkit-interner.workspace = true
 pawkit-fs.workspace = true
 
 pawkit-crockford.workspace = true

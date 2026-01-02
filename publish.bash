@@ -19,6 +19,7 @@ CRATES=(
   "pawkit-holy-array:holy-array"
   "pawkit-crockford:crockford"
   "pawkit-bitarray:bitarray"
+  "pawkit-interner:interner"
   "pawkit-logger:logger"
   "pawkit-input:input"
   "pawkit-fs:fs"
