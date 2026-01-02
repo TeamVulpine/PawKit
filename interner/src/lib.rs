@@ -273,39 +273,41 @@ impl Deref for InternString {
     type Target = str;
 
     fn deref(&self) -> &Self::Target {
-        self.as_str()
+        return self.as_str();
     }
 }
 
 impl Debug for InternString {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("InternString").field(&self.as_str()).finish()
+        return f.debug_tuple("InternString").field(&self.as_str()).finish();
     }
 }
 
 impl Display for InternString {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
+        return f.write_str(self.as_str());
     }
 }
 
 impl Debug for WeakInternString {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(s) = self.as_str() {
-            f.debug_tuple("WeakInternString").field(&s).finish()
-        } else {
-            f.debug_tuple("WeakInternString").field(&"<dead>").finish()
-        }
+        let mut t = f.debug_tuple("WeakInternString");
+
+        let Some(s) = self.as_str() else {
+            return t.field(&"<dead>").finish();
+        };
+
+        return t.field(&s).finish();
     }
 }
 
 impl Display for WeakInternString {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(s) = self.as_str() {
-            f.write_str(s)
-        } else {
-            f.write_str("<dead>")
-        }
+        let Some(s) = self.as_str() else {
+            return f.write_str(&"<dead>");
+        };
+
+        return f.write_str(&s);
     }
 }
 
