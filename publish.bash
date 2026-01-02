@@ -16,9 +16,9 @@ WORKSPACE_TOML="Cargo.toml"
 
 # Ordered crate list
 CRATES=(
-#   "pawkit-holy-array:holy-array"
-#   "pawkit-crockford:crockford"
-#   "pawkit-bitarray:bitarray"
+  "pawkit-holy-array:holy-array"
+  "pawkit-crockford:crockford"
+  "pawkit-bitarray:bitarray"
   "pawkit-interner:interner"
   "pawkit-logger:logger"
   "pawkit-input:input"
