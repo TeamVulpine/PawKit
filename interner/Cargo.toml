@@ -9,3 +9,4 @@ description = "Multithreaded string interner for PawKit"
 
 [dependencies]
 dashmap.workspace = true
+serde.workspace = true

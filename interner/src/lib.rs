@@ -1,4 +1,4 @@
-#![feature(ptr_metadata, cold_path, layout_for_ptr)]
+#![feature(cold_path, str_from_raw_parts)]
 
 use core::{fmt, str};
 use std::{
@@ -6,7 +6,8 @@ use std::{
     fmt::{Debug, Display},
     hint::cold_path,
     ops::Deref,
-    ptr::{self, NonNull, copy_nonoverlapping, slice_from_raw_parts_mut},
+    ptr::{self, NonNull, copy_nonoverlapping},
+    str::FromStr,
     sync::{
         LazyLock,
         atomic::{AtomicUsize, Ordering},
@@ -14,13 +15,14 @@ use std::{
 };
 
 use dashmap::{DashMap, Entry};
+use serde::{Deserialize, Serialize, de::Visitor};
 
 const MAX_REFCOUNT: usize = (isize::MAX) as usize;
 
 struct InternInner {
     strong: AtomicUsize,
     weak: AtomicUsize,
-    data: str,
+    len: usize,
 }
 
 /// Represents an interned string.
@@ -44,40 +46,57 @@ pub struct WeakInternString {
 static DATA: LazyLock<DashMap<&'static str, WeakInternString>> = LazyLock::new(Default::default);
 
 impl InternInner {
+    unsafe fn data_mut<'a>(value: NonNull<Self>) -> &'a mut str {
+        unsafe {
+            return str::from_raw_parts_mut(value.as_ptr().add(1) as *mut u8, (*value.as_ptr()).len);
+        }
+    }
+    
+    unsafe fn data<'a>(value: NonNull<Self>) -> &'a str {
+        unsafe {
+            return str::from_raw_parts(value.as_ptr().add(1) as *mut u8, (*value.as_ptr()).len);
+        }
+    }
+
     fn layout_for(len: usize) -> Layout {
-        return Layout::new::<AtomicUsize>()
-            .extend(Layout::new::<AtomicUsize>())
-            .unwrap()
-            .0
+        return Layout::new::<Self>()
             .extend(Layout::array::<u8>(len).unwrap())
             .unwrap()
             .0
             .pad_to_align();
     }
 
+    fn layout(value: NonNull<Self>) -> Layout {
+        unsafe {
+            return Self::layout_for((*value.as_ptr()).len);
+        }
+    }
+
     unsafe fn alloc(s: &str) -> (NonNull<Self>, &'static str) {
         unsafe {
             let layout = Self::layout_for(s.len());
 
-            let ptr = slice_from_raw_parts_mut(alloc(layout), s.len()) as *mut Self;
-
-            assert_eq!(layout, Layout::for_value_raw(ptr));
+            let ptr = alloc(layout) as *mut Self;
 
             let value = &mut *ptr;
 
             value.strong = AtomicUsize::new(1);
             value.weak = AtomicUsize::new(1);
+            value.len = s.len();
 
-            copy_nonoverlapping(s.as_ptr(), value.data.as_mut_ptr(), s.len());
+            let ptr = NonNull::new_unchecked(ptr);
+            let data = InternInner::data_mut(ptr);
 
-            return (NonNull::new_unchecked(ptr), &value.data);
+            copy_nonoverlapping(s.as_ptr(), data.as_mut_ptr(), s.len());
+
+            return (ptr, data);
         }
     }
 
     unsafe fn dealloc(value: NonNull<Self>) {
         unsafe {
             let ptr = value.as_ptr();
-            let layout = Layout::for_value_raw(ptr);
+            let layout = Self::layout(value);
 
             dealloc(ptr as *mut u8, layout);
         }
@@ -132,7 +151,9 @@ impl InternString {
 
     /// Retruns the underlying string data.
     pub fn as_str<'a>(&'a self) -> &'a str {
-        return &self.inner().data;
+        unsafe {
+            return InternInner::data(self.inner);
+        }
     }
 
     /// Converts into a weak reference
@@ -164,7 +185,9 @@ impl WeakInternString {
             return None;
         }
 
-        return Some(&self.inner().data);
+        unsafe {
+            return Some(InternInner::data(self.inner));
+        }
     }
 
     /// Converts to a strong reference if the string is still alive
@@ -308,6 +331,94 @@ impl Display for WeakInternString {
         };
 
         return f.write_str(&s);
+    }
+}
+
+impl FromStr for InternString {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        return Ok(Self::new(s));
+    }
+}
+
+impl From<&str> for InternString {
+    fn from(value: &str) -> Self {
+        return Self::new(value);
+    }
+}
+
+impl From<String> for InternString {
+    fn from(value: String) -> Self {
+        return Self::new(&value);
+    }
+}
+
+impl Serialize for InternString {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        return serializer.serialize_str(self);
+    }
+}
+
+struct InternStringVisitor;
+
+impl<'a> Visitor<'a> for InternStringVisitor {
+    type Value = InternString;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a string")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Ok(v.into())
+    }
+
+    fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Ok(v.into())
+    }
+
+    fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        match str::from_utf8(v) {
+            Ok(s) => Ok(s.into()),
+            Err(_) => Err(serde::de::Error::invalid_value(
+                serde::de::Unexpected::Bytes(v),
+                &self,
+            )),
+        }
+    }
+
+    fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        match String::from_utf8(v) {
+            Ok(s) => Ok(s.into()),
+            Err(e) => Err(serde::de::Error::invalid_value(
+                serde::de::Unexpected::Bytes(&e.into_bytes()),
+                &self,
+            )),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for InternString {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        return deserializer.deserialize_string(InternStringVisitor);
     }
 }
 
