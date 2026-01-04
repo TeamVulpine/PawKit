@@ -10,6 +10,7 @@ mod fs;
 mod input;
 mod logger;
 mod net;
+mod string;
 
 macro c_enum {
     (
