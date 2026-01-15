@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use pawkit_interner::InternString;
 use serde::{Deserialize, Serialize};
 
-use crate::binding::{AnalogBinding, BindingList, DigitalBinding, VectorBinding};
+use crate::binding::{AnalogBinding, BindingKind, BindingList, DigitalBinding, VectorBinding};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BindingMap {
@@ -185,6 +185,16 @@ impl BindingMap {
 
     pub fn get_bindings(&self, name: &InternString) -> Option<&BindingList> {
         return self.map.get(name);
+    }
+
+    pub fn get_binding_kind(&self, name: &InternString) -> Option<BindingKind> {
+        let bindings = self.get_bindings(name)?;
+
+        match bindings {
+            BindingList::Digital(_) => return Some(BindingKind::Digital),
+            BindingList::Analog(_) => return Some(BindingKind::Analog),
+            BindingList::Vector(_) => return Some(BindingKind::Vector),
+        };
     }
 }
 

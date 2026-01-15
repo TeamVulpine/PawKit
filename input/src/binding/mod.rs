@@ -103,3 +103,10 @@ pub enum BindingList {
     Analog(Vec<AnalogBinding>),
     Vector(Vec<VectorBinding>),
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum BindingKind {
+    Digital,
+    Analog,
+    Vector,
+}

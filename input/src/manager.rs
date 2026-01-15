@@ -1,13 +1,14 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use pawkit_interner::InternString;
 
 use crate::{
     DeviceId,
     binding::{
-        AnalogBinding, BindingList, DigitalBinding, VectorBinding,
+        AnalogBinding, BindingKind, BindingList, DigitalBinding, VectorBinding,
         map::{BindingMap, BindingMapModificaitonError},
     },
+    length_squared,
     state::InputState,
 };
 
@@ -37,6 +38,14 @@ union RawInputFrame {
     digital: DigitalInputFrame,
     analog: AnalogInputFrame,
     vector: VectorInputFrame,
+}
+
+#[repr(C, u8)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+pub enum InputFrame {
+    Digital(DigitalInputFrame),
+    Analog(AnalogInputFrame),
+    Vector(VectorInputFrame),
 }
 
 pub struct InputManager {
@@ -98,7 +107,7 @@ impl InputManager {
         if self.devices.contains(&device) {
             return;
         }
-        
+
         self.devices.push(device);
     }
 
@@ -120,18 +129,81 @@ impl InputManager {
                     let frame = unsafe { &mut frame.digital };
 
                     let mut pressed = false;
+
+                    for device in &self.devices {
+                        let Some(true) = state.get_digital(&device, bindings) else {
+                            continue;
+                        };
+
+                        pressed = true;
+                        break;
+                    }
+
+                    let was_pressed = frame.pressed;
+
+                    frame.pressed = pressed;
+                    frame.just_pressed = !was_pressed && pressed;
+                    frame.just_released = was_pressed && !pressed;
                 }
 
                 BindingList::Analog(bindings) => {
                     // SAFETY: We constructed the raw frame with the same type that the given name is
                     let frame = unsafe { &mut frame.analog };
+
+                    let mut value = 0f32;
+
+                    for device in &self.devices {
+                        let Some(analog) = state.get_analog(&device, bindings) else {
+                            continue;
+                        };
+
+                        value = value.max(analog);
+                    }
+
+                    let old_value = frame.value;
+
+                    frame.value = value;
+                    frame.delta = value - old_value;
                 }
 
                 BindingList::Vector(bindings) => {
                     // SAFETY: We constructed the raw frame with the same type that the given name is
                     let frame = unsafe { &mut frame.vector };
+
+                    let mut value = [0f32; 2];
+                    let mut value_len_sqr = 0f32;
+
+                    for device in &self.devices {
+                        let Some(analog) = state.get_vector(&device, bindings) else {
+                            continue;
+                        };
+
+                        let analog_len_sqr = length_squared(analog);
+
+                        if analog_len_sqr > value_len_sqr {
+                            value = analog;
+                            value_len_sqr = analog_len_sqr;
+                        }
+                    }
+
+                    let old_value = frame.value;
+
+                    frame.value = value;
+                    frame.delta = [old_value[0] - value[0], old_value[1] - value[1]];
                 }
             }
+        }
+    }
+
+    pub fn get_binding(&self, name: &InternString) -> Option<InputFrame> {
+        let index = self.frame_indices.get(name)?;
+
+        let frame = &self.frames[*index];
+
+        match self.bindings.get_binding_kind(name)? {
+            BindingKind::Digital => return Some(InputFrame::Digital(unsafe { frame.digital })),
+            BindingKind::Analog => return Some(InputFrame::Analog(unsafe { frame.analog })),
+            BindingKind::Vector => return Some(InputFrame::Vector(unsafe { frame.vector })),
         }
     }
 

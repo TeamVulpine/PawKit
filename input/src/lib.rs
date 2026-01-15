@@ -31,3 +31,7 @@ impl Deref for BindingName {
         return &self.0;
     }
 }
+
+fn length_squared([a, b]: [f32; 2]) -> f32 {
+    return a * a + b * b;
+}
