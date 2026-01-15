@@ -8,3 +8,4 @@ repository = "https://github.com/TeamVulpine/PawKit/tree/main/crockford"
 description = "A small library for serializing to/from Crockford Base32"
 
 [dependencies]
+rand = "0.9.2"

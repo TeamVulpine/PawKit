@@ -30,6 +30,8 @@ typedef int64_t pawkit_i64;
 typedef size_t pawkit_usize;
 typedef ptrdiff_t pawkit_isize;
 
+typedef pawkit_u8 pawkit_ulid[16];
+
 typedef float pawkit_f32;
 typedef double pawkit_f64;
 

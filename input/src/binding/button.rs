@@ -1,11 +1,11 @@
 use num_enum::TryFromPrimitive;
 use serde::{Deserialize, Serialize};
 
-use crate::bindings::implement_into;
+use crate::binding::implement_into;
 
 #[repr(u8)]
 #[rustfmt::skip]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TryFromPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TryFromPrimitive)]
 #[serde(rename_all = "PascalCase")]
 pub enum KeyboardButton {
     A, B, C, D, E, F, G, H, I, J, K, L, M,
@@ -50,9 +50,7 @@ pub enum KeyboardButton {
 implement_into!(KeyboardButton);
 
 #[repr(u8)]
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TryFromPrimitive,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TryFromPrimitive)]
 #[serde(rename_all = "PascalCase")]
 pub enum MouseButton {
     Left,
@@ -65,9 +63,7 @@ pub enum MouseButton {
 implement_into!(MouseButton);
 
 #[repr(u8)]
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TryFromPrimitive,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TryFromPrimitive)]
 #[serde(rename_all = "PascalCase")]
 pub enum GamepadButton {
     South,

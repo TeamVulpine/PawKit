@@ -3,6 +3,7 @@ resolver = "2"
 
 members = [
   "logger",
+  "interner",
   "net/signaling",
   "net/runtime",
   "net/websocket",
@@ -11,10 +12,9 @@ members = [
   "crockford",
   "holy-array",
   "input",
-  "bitarray",
   "bindings/c",
   "bindings/lua",
-  "bindings/godot", "interner",
+  "bindings/godot",
 ]
 
 [workspace.dependencies]
@@ -41,9 +41,6 @@ pawkit-crockford.version = "0.1.9"
 
 pawkit-holy-array.path = "./holy-array"
 pawkit-holy-array.version = "0.1.9"
-
-pawkit-bitarray.path = "./bitarray"
-pawkit-bitarray.version = "0.1.9"
 
 pawkit-input.path = "./input"
 pawkit-input.version = "0.1.9"
@@ -123,8 +120,5 @@ pawkit-crockford.optional = true
 pawkit-holy-array.workspace = true
 pawkit-holy-array.optional = true
 
-pawkit-bitarray.workspace = true
-pawkit-bitarray.optional = true
-
 [features]
-internal_libraries = ["pawkit-crockford", "pawkit-holy-array", "pawkit-bitarray"]
+internal_libraries = ["pawkit-crockford", "pawkit-holy-array"]

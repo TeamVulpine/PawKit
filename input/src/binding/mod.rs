@@ -1,14 +1,15 @@
-use std::{fmt::Debug, ops::Deref};
+use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
-use crate::bindings::{
+use crate::binding::{
     axis::{GamepadAxis, KeyboardAxis, MouseAxis},
     button::{GamepadButton, KeyboardButton, MouseButton},
 };
 
 pub mod axis;
 pub mod button;
+pub mod map;
 
 pub(self) macro implement_into($ty:ty) {
     impl Into<usize> for $ty {
@@ -18,23 +19,25 @@ pub(self) macro implement_into($ty:ty) {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(bound = "TButton: for<'a> Deserialize<'a>, TAxis: for<'a> Deserialize<'a>")]
+#[serde(tag = "mode")]
 pub enum BoundButton<TButton, TAxis>
 where
-    TButton: Sized + Debug + Clone + Copy + PartialEq + PartialOrd + Serialize,
-    TAxis: Sized + Debug + Clone + Copy + PartialEq + PartialOrd + Serialize,
+    TButton: Debug + Copy + PartialEq + Serialize,
+    TAxis: Debug + Copy + PartialEq + Serialize,
 {
     Analog { axis: TAxis, threshold: f32 },
     Digital(TButton),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(bound = "TButton: for<'a> Deserialize<'a>, TAxis: for<'a> Deserialize<'a>")]
+#[serde(tag = "mode")]
 pub enum BoundAxis<TButton, TAxis>
 where
-    TButton: Sized + Debug + Clone + Copy + PartialEq + PartialOrd + Serialize,
-    TAxis: Sized + Debug + Clone + Copy + PartialEq + PartialOrd + Serialize,
+    TButton: Debug + Copy + PartialEq + Serialize,
+    TAxis: Debug + Copy + PartialEq + Serialize,
 {
     Analog(TAxis),
     Digital(TButton),
@@ -44,21 +47,23 @@ where
     },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "family")]
 pub enum DigitalBinding {
     Keyboard(BoundButton<KeyboardButton, KeyboardAxis>),
     Mouse(BoundButton<MouseButton, MouseAxis>),
     Gamepad(BoundButton<GamepadButton, GamepadAxis>),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "family")]
 pub enum AnalogBindingKind {
     Keyboard(BoundAxis<KeyboardButton, KeyboardAxis>),
     Mouse(BoundAxis<MouseButton, MouseAxis>),
     Gamepad(BoundAxis<GamepadButton, GamepadAxis>),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct AnalogBinding {
     #[serde(flatten)]
     pub axis: AnalogBindingKind,
@@ -66,7 +71,8 @@ pub struct AnalogBinding {
     pub scale: f32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "family")]
 pub enum VectorBindingKind {
     Keyboard {
         x: BoundAxis<KeyboardButton, KeyboardAxis>,
@@ -82,7 +88,7 @@ pub enum VectorBindingKind {
     },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct VectorBinding {
     #[serde(flatten)]
     pub axes: VectorBindingKind,
@@ -90,23 +96,10 @@ pub struct VectorBinding {
     pub scale: (f32, f32),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-pub enum DefaultBindingType<'a> {
-    Digital(&'a [DigitalBinding]),
-    Analog(&'a [AnalogBinding]),
-    Vector(&'a [VectorBinding]),
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-pub struct DefaultBinding {
-    pub name: &'static str,
-    pub bindings: DefaultBindingType<'static>,
-}
-
-impl Deref for DefaultBinding {
-    type Target = str;
-
-    fn deref(&self) -> &Self::Target {
-        return self.name;
-    }
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type", content = "bindings")]
+pub enum BindingList {
+    Digital(Vec<DigitalBinding>),
+    Analog(Vec<AnalogBinding>),
+    Vector(Vec<VectorBinding>),
 }

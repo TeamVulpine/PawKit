@@ -1,138 +1,185 @@
-use std::sync::{Arc, RwLock};
+use std::collections::{HashMap, HashSet};
 
-use num_enum::TryFromPrimitive;
-use pawkit_bitarray::BitArray;
-use pawkit_holy_array::HolyArray;
-use serde::{Deserialize, Serialize};
+use pawkit_interner::InternString;
 
-#[repr(u8)]
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TryFromPrimitive,
-)]
-pub enum InputFamily {
-    Keyboard,
-    Mouse,
-    Gamepad,
+use crate::{
+    DeviceId,
+    binding::{
+        AnalogBinding, BindingList, DigitalBinding, VectorBinding,
+        map::{BindingMap, BindingMapModificaitonError},
+    },
+    state::InputState,
+};
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct DigitalInputFrame {
+    pub pressed: bool,
+    pub just_pressed: bool,
+    pub just_released: bool,
 }
 
-impl InputFamily {
-    pub fn digital_count(&self) -> usize {
-        return match self {
-            Self::Keyboard => 120,
-            Self::Mouse => 5,
-            Self::Gamepad => 26,
-        };
-    }
-
-    pub fn analog_count(&self) -> usize {
-        return match self {
-            Self::Keyboard => 0,
-            Self::Mouse => 4,
-            Self::Gamepad => 6,
-        };
-    }
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+pub struct AnalogInputFrame {
+    pub value: f32,
+    pub delta: f32,
 }
 
-pub struct InputDeviceManager {
-    family: InputFamily,
-    devices: RwLock<HolyArray<Arc<InputDeviceState>>>,
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+pub struct VectorInputFrame {
+    pub value: [f32; 2],
+    pub delta: [f32; 2],
 }
 
-pub struct InputDeviceState {
-    raw_id: usize,
-    pub digital_inputs: RwLock<BitArray>,
-    pub analog_inputs: RwLock<Box<[f32]>>,
+union RawInputFrame {
+    digital: DigitalInputFrame,
+    analog: AnalogInputFrame,
+    vector: VectorInputFrame,
 }
 
-impl InputDeviceManager {
-    pub fn new(family: InputFamily) -> Self {
-        return Self {
-            family,
-            devices: RwLock::new(HolyArray::new()),
-        };
-    }
+pub struct InputManager {
+    bindings: BindingMap,
+    devices: Vec<DeviceId>,
+    frame_indices: im::HashMap<InternString, usize>,
+    frames: Box<[RawInputFrame]>,
+}
 
-    pub fn raw_id_to_id(&self, raw_id: usize) -> Option<usize> {
-        let devices = self.devices.read().ok()?;
+impl InputManager {
+    pub fn new(bindings: BindingMap) -> Self {
+        let mut frame_indices = HashMap::new();
+        let mut frames = vec![];
 
-        for id in 0..devices.len() {
-            let Some(device) = devices.get(id) else {
-                continue;
-            };
+        for (key, value) in &bindings {
+            let index = frames.len();
+            frame_indices.insert(key.clone(), index);
 
-            if device.raw_id == raw_id {
-                return Some(id);
+            match value {
+                BindingList::Digital(_) => {
+                    frames.push(RawInputFrame {
+                        digital: DigitalInputFrame {
+                            pressed: false,
+                            just_pressed: false,
+                            just_released: false,
+                        },
+                    });
+                }
+
+                BindingList::Analog(_) => {
+                    frames.push(RawInputFrame {
+                        analog: AnalogInputFrame {
+                            value: 0f32,
+                            delta: 0f32,
+                        },
+                    });
+                }
+
+                BindingList::Vector(_) => {
+                    frames.push(RawInputFrame {
+                        vector: VectorInputFrame {
+                            value: [0f32; 2],
+                            delta: [0f32; 2],
+                        },
+                    });
+                }
             }
         }
 
-        return None;
+        return Self {
+            bindings,
+            devices: vec![],
+            frame_indices: frame_indices.into(),
+            frames: frames.into(),
+        };
     }
 
-    pub fn device_connected(&self, raw_id: usize) -> usize {
-        let mut devices = self.devices.write().unwrap();
-
-        return devices.acquire(Arc::new(InputDeviceState {
-            raw_id,
-            digital_inputs: RwLock::new(BitArray::new(self.family.digital_count())),
-            analog_inputs: RwLock::new(vec![0f32; self.family.analog_count()].into_boxed_slice()),
-        }));
-    }
-
-    pub fn device_disconnected(&self, id: usize) {
-        let mut devices = self.devices.write().unwrap();
-
-        devices.release(id);
-    }
-
-    pub fn device_disconnected_raw(&self, raw_id: usize) {
-        let Some(id) = self.raw_id_to_id(raw_id) else {
+    pub fn connect_device(&mut self, device: DeviceId) {
+        if self.devices.contains(&device) {
             return;
-        };
-
-        self.device_disconnected(id);
-    }
-
-    pub fn get_state(&self, id: usize) -> Option<Arc<InputDeviceState>> {
-        let devices = self.devices.read().ok()?;
-
-        return devices.get(id).map(Arc::clone);
-    }
-
-    pub fn get_state_raw(&self, raw_id: usize) -> Option<Arc<InputDeviceState>> {
-        let Some(id) = self.raw_id_to_id(raw_id) else {
-            return None;
-        };
-
-        return self.get_state(id);
-    }
-}
-
-impl InputDeviceState {
-    pub fn get_analog(&self, axis: usize) -> f32 {
-        let analog = self.analog_inputs.read().unwrap();
-
-        return analog[axis];
-    }
-
-    pub fn get_digital(&self, button: usize) -> bool {
-        let digital = self.digital_inputs.read().unwrap();
-
-        return digital.get(button).unwrap();
-    }
-
-    pub fn set_analog(&self, axis: usize, value: f32) {
-        let mut analog = self.analog_inputs.write().unwrap();
-
-        analog[axis] = value
-    }
-
-    pub fn set_digital(&self, button: usize, value: bool) {
-        let mut digital = self.digital_inputs.write().unwrap();
-
-        if value {
-            digital.set(button);
-        } else {
-            digital.reset(button);
         }
+        
+        self.devices.push(device);
+    }
+
+    pub fn disconnect_device(&mut self, device: DeviceId) {
+        self.devices.retain(|it| *it != device);
+    }
+
+    pub fn update(&mut self, state: &InputState) {
+        for (name, index) in &self.frame_indices {
+            let frame = &mut self.frames[*index];
+
+            let Some(bindings) = self.bindings.get_bindings(name) else {
+                continue;
+            };
+
+            match bindings {
+                BindingList::Digital(bindings) => {
+                    // SAFETY: We constructed the raw frame with the same type that the given name is
+                    let frame = unsafe { &mut frame.digital };
+
+                    let mut pressed = false;
+                }
+
+                BindingList::Analog(bindings) => {
+                    // SAFETY: We constructed the raw frame with the same type that the given name is
+                    let frame = unsafe { &mut frame.analog };
+                }
+
+                BindingList::Vector(bindings) => {
+                    // SAFETY: We constructed the raw frame with the same type that the given name is
+                    let frame = unsafe { &mut frame.vector };
+                }
+            }
+        }
+    }
+
+    pub fn add_digital_binding(
+        &mut self,
+        name: InternString,
+        value: DigitalBinding,
+    ) -> Result<(), BindingMapModificaitonError> {
+        return self.bindings.add_digital_binding(name, value);
+    }
+
+    pub fn remove_digital_binding(
+        &mut self,
+        name: InternString,
+        value: DigitalBinding,
+    ) -> Result<(), BindingMapModificaitonError> {
+        return self.bindings.remove_digital_binding(name, value);
+    }
+
+    pub fn add_analog_binding(
+        &mut self,
+        name: InternString,
+        value: AnalogBinding,
+    ) -> Result<(), BindingMapModificaitonError> {
+        return self.bindings.add_analog_binding(name, value);
+    }
+
+    pub fn remove_analog_binding(
+        &mut self,
+        name: InternString,
+        value: AnalogBinding,
+    ) -> Result<(), BindingMapModificaitonError> {
+        return self.bindings.remove_analog_binding(name, value);
+    }
+
+    pub fn add_vector_binding(
+        &mut self,
+        name: InternString,
+        value: VectorBinding,
+    ) -> Result<(), BindingMapModificaitonError> {
+        return self.bindings.add_vector_binding(name, value);
+    }
+
+    pub fn remove_vector_binding(
+        &mut self,
+        name: InternString,
+        value: VectorBinding,
+    ) -> Result<(), BindingMapModificaitonError> {
+        return self.bindings.remove_vector_binding(name, value);
     }
 }

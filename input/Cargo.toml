@@ -8,10 +8,13 @@ repository = "https://github.com/TeamVulpine/PawKit/tree/main/bitarray"
 description = "PawKit's input module"
 
 [dependencies]
-pawkit-bitarray.workspace = true
 pawkit-holy-array.workspace = true
+pawkit-interner.workspace = true
+pawkit-crockford.workspace = true
 
 num_enum.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
+bitvec = "1.0.1"
+im = "15.1.0"

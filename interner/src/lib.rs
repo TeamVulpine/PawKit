@@ -2,9 +2,17 @@
 
 use core::{fmt, str};
 use std::{
-    alloc::{Layout, alloc, dealloc}, fmt::{Debug, Display}, hint::cold_path, mem::forget, ops::Deref, ptr::{self, NonNull, copy_nonoverlapping}, str::FromStr, sync::{
-        Arc, LazyLock, atomic::{AtomicUsize, Ordering}
-    }
+    alloc::{Layout, alloc, dealloc},
+    fmt::{Debug, Display},
+    hint::cold_path,
+    mem::forget,
+    ops::Deref,
+    ptr::{self, NonNull, copy_nonoverlapping},
+    str::FromStr,
+    sync::{
+        LazyLock,
+        atomic::{AtomicUsize, Ordering},
+    },
 };
 
 use dashmap::{DashMap, Entry};
@@ -39,13 +47,13 @@ pub struct WeakInternString {
 static DATA: LazyLock<DashMap<&'static str, WeakInternString>> = LazyLock::new(Default::default);
 
 impl InternInner {
-    unsafe fn data_ptr<'a>(value: NonNull<Self>) -> *const u8{
+    unsafe fn data_ptr<'a>(value: NonNull<Self>) -> *const u8 {
         unsafe {
             return value.as_ptr().add(1) as *const u8;
         }
     }
 
-    unsafe fn data_ptr_mut<'a>(value: NonNull<Self>) -> *mut u8{
+    unsafe fn data_ptr_mut<'a>(value: NonNull<Self>) -> *mut u8 {
         unsafe {
             return value.as_ptr().add(1) as *mut u8;
         }
@@ -56,7 +64,7 @@ impl InternInner {
             return str::from_raw_parts_mut(Self::data_ptr_mut(value), (*value.as_ptr()).len);
         }
     }
-    
+
     unsafe fn data<'a>(value: NonNull<Self>) -> &'a str {
         unsafe {
             return str::from_raw_parts(Self::data_ptr(value), (*value.as_ptr()).len);
@@ -121,7 +129,7 @@ impl InternString {
     /// [`InternString::from_raw`].
     pub fn into_raw(self) -> *const u8 {
         let ptr = self.inner.as_ptr() as *const u8;
-        
+
         forget(self);
 
         return ptr;
@@ -135,10 +143,8 @@ impl InternString {
         if !inner.is_aligned() {
             return None;
         }
-        
-        return Some(Self {
-            inner: inner,
-        });
+
+        return Some(Self { inner: inner });
     }
 
     /// Creates a new intern string from the provided string
