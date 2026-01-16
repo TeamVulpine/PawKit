@@ -6,11 +6,11 @@ use std::{
     ptr,
 };
 
-mod fs;
-mod input;
-mod logger;
-mod net;
-mod string;
+pub(crate) mod fs;
+pub(crate) mod input;
+pub(crate) mod logger;
+pub(crate) mod net;
+pub(crate) mod string;
 
 macro c_enum {
     (

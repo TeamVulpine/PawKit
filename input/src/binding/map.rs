@@ -29,6 +29,10 @@ impl BindingMap {
         return serde_json::from_str(s);
     }
 
+    pub fn save(&self) -> String {
+        return serde_json::to_string(self).unwrap();
+    }
+
     pub fn ensure_prototype(&mut self, prototype: &BindingMap) {
         self.map.retain(|key, _| prototype.map.contains_key(key));
 
@@ -51,7 +55,7 @@ impl BindingMap {
         self.map.insert(name, values);
     }
 
-    pub fn add_digital_binding(
+    pub(crate) fn add_digital_binding(
         &mut self,
         name: InternString,
         value: DigitalBinding,
@@ -73,7 +77,7 @@ impl BindingMap {
         return Ok(());
     }
 
-    pub fn remove_digital_binding(
+    pub(crate) fn remove_digital_binding(
         &mut self,
         name: InternString,
         value: DigitalBinding,
@@ -95,7 +99,7 @@ impl BindingMap {
         return Ok(());
     }
 
-    pub fn add_analog_binding(
+    pub(crate) fn add_analog_binding(
         &mut self,
         name: InternString,
         value: AnalogBinding,
@@ -117,7 +121,7 @@ impl BindingMap {
         return Ok(());
     }
 
-    pub fn remove_analog_binding(
+    pub(crate) fn remove_analog_binding(
         &mut self,
         name: InternString,
         value: AnalogBinding,
@@ -139,7 +143,7 @@ impl BindingMap {
         return Ok(());
     }
 
-    pub fn add_vector_binding(
+    pub(crate) fn add_vector_binding(
         &mut self,
         name: InternString,
         value: VectorBinding,
@@ -161,7 +165,7 @@ impl BindingMap {
         return Ok(());
     }
 
-    pub fn remove_vector_binding(
+    pub(crate) fn remove_vector_binding(
         &mut self,
         name: InternString,
         value: VectorBinding,

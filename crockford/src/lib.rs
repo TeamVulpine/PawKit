@@ -103,6 +103,7 @@ impl_crockford!(u32);
 impl_crockford!(u64);
 impl_crockford!(u128);
 
+#[repr(C)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Ulid([u8; 16]);
 

@@ -1,3 +1,6 @@
+// Temporarily unavailable.
+// If you need a C++ wrapper, open a PR.
+
 // #pragma once
 
 // #include "input.h"

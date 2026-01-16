@@ -123,9 +123,9 @@ impl InternString {
         }
     }
 
-    /// Consumes the `InternInner`, returning the wrapped pointer.
+    /// Consumes the `InternString`, returning the wrapped pointer.
     ///
-    /// To avoid a memory leak the pointer must be converted back to an `Arc` using
+    /// To avoid a memory leak the pointer must be converted back to an `InternString` using
     /// [`InternString::from_raw`].
     pub fn into_raw(self) -> *const u8 {
         let ptr = self.inner.as_ptr() as *const u8;
@@ -135,7 +135,7 @@ impl InternString {
         return ptr;
     }
 
-    /// Constructs an `InternInner<T>` from a raw pointer.
+    /// Constructs an `InternString` from a raw pointer.
     ///
     /// The raw pointer must have been previously returned by a call to [`InternString::into_raw`].
     pub unsafe fn from_raw(value: *const u8) -> Option<Self> {

@@ -6,6 +6,18 @@ use crate::binding::implement_into;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum KeyboardAxis {}
 
+impl TryFromPrimitive for KeyboardAxis {
+    type Primitive = u8;
+
+    type Error = ();
+
+    const NAME: &'static str = "KeyboardAxis";
+
+    fn try_from_primitive(_: Self::Primitive) -> Result<Self, Self::Error> {
+        return Err(());
+    }
+}
+
 implement_into!(KeyboardAxis);
 
 #[repr(u8)]

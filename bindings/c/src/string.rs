@@ -16,6 +16,17 @@ pub extern "C" fn pawkit_string_from(cstr: *const c_char, len: usize) -> *const 
 }
 
 #[unsafe(no_mangle)]
+pub fn intern_string_clone(string: *const u8) -> Option<InternString> {
+    unsafe {
+        let string = InternString::from_raw(string)?;
+
+        forget(string.clone());
+
+        return Some(string);
+    }
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn pawkit_string_addref(string: *const u8) {
     unsafe {
         let Some(string) = InternString::from_raw(string) else {
@@ -45,6 +56,8 @@ pub extern "C" fn pawkit_string_get(raw: *const u8, size: *mut usize) -> *const 
         };
 
         *size = string.len();
+
+        forget(string);
 
         // InternString's raw pointer is defined as the start of the string data.
         return raw as *const c_char;

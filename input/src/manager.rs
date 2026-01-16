@@ -34,7 +34,9 @@ pub struct VectorInputFrame {
     pub delta: [f32; 2],
 }
 
-union RawInputFrame {
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union RawInputFrame {
     digital: DigitalInputFrame,
     analog: AnalogInputFrame,
     vector: VectorInputFrame,
@@ -193,6 +195,12 @@ impl InputManager {
                 }
             }
         }
+    }
+
+    pub unsafe fn get_binding_raw(&self, name: &InternString) -> Option<RawInputFrame> {
+        let index = self.frame_indices.get(name)?;
+
+        return Some(self.frames[*index]);
     }
 
     pub fn get_binding(&self, name: &InternString) -> Option<InputFrame> {

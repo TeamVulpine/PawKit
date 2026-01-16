@@ -15,6 +15,7 @@ pub mod state;
 #[serde(transparent)]
 pub struct BindingName(InternString);
 
+#[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct DeviceId(Ulid);
 
@@ -29,6 +30,12 @@ impl Deref for BindingName {
 
     fn deref(&self) -> &Self::Target {
         return &self.0;
+    }
+}
+
+impl DeviceId {
+    pub fn null() -> Self {
+        return Self(Ulid::from_raw_parts(0, 0));
     }
 }
 
