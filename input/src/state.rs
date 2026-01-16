@@ -188,56 +188,6 @@ impl InputState {
         return true;
     }
 
-    pub fn get_keyboard_button(&self, device: &DeviceId, button: KeyboardButton) -> Option<bool> {
-        let device = self.devices.get(&device.0)?;
-
-        let DeviceState::Keyboard(buttons) = device else {
-            return None;
-        };
-
-        return buttons.get(button as usize).map(|it| *it);
-    }
-
-    pub fn get_mouse_button(&self, device: &DeviceId, button: MouseButton) -> Option<bool> {
-        let device = self.devices.get(&device.0)?;
-
-        let DeviceState::Mouse(buttons, _) = device else {
-            return None;
-        };
-
-        return buttons.get(button as usize).map(|it| *it);
-    }
-
-    pub fn get_gamepad_button(&self, device: &DeviceId, button: GamepadButton) -> Option<bool> {
-        let device = self.devices.get(&device.0)?;
-
-        let DeviceState::Gamepad(buttons, _) = device else {
-            return None;
-        };
-
-        return buttons.get(button as usize).map(|it| *it);
-    }
-
-    pub fn get_mouse_axis(&self, device: &DeviceId, axis: MouseAxis) -> Option<f32> {
-        let device = self.devices.get(&device.0)?;
-
-        let DeviceState::Mouse(_, axes) = device else {
-            return None;
-        };
-
-        return Some(axes[axis as usize]);
-    }
-
-    pub fn get_gamepad_axis(&self, device: &DeviceId, axis: GamepadAxis) -> Option<f32> {
-        let device = self.devices.get(&device.0)?;
-
-        let DeviceState::Gamepad(_, axes) = device else {
-            return None;
-        };
-
-        return Some(axes[axis as usize]);
-    }
-
     fn get_digital_single<TButton, TAxis>(
         &self,
         digital: &BitSlice<u8>,
@@ -254,7 +204,7 @@ impl InputState {
         }
     }
 
-    pub fn get_digital(&self, device: &DeviceId, bindings: &[DigitalBinding]) -> Option<bool> {
+    pub(crate) fn get_digital(&self, device: &DeviceId, bindings: &[DigitalBinding]) -> Option<bool> {
         let device = self.devices.get(&device.0)?;
         let family = device.family();
         let digital = device.digital();
@@ -287,7 +237,7 @@ impl InputState {
         return Some(false);
     }
 
-    pub fn get_analog_single<TButton, TAxis>(
+    pub(crate) fn get_analog_single<TButton, TAxis>(
         &self,
         digital: &BitSlice<u8>,
         analog: &[f32],
@@ -316,7 +266,7 @@ impl InputState {
         }
     }
 
-    pub fn get_analog(&self, device: &DeviceId, bindings: &[AnalogBinding]) -> Option<f32> {
+    pub(crate) fn get_analog(&self, device: &DeviceId, bindings: &[AnalogBinding]) -> Option<f32> {
         let device = self.devices.get(&device.0)?;
         let family = device.family();
         let digital = device.digital();
@@ -345,7 +295,7 @@ impl InputState {
         return Some(value);
     }
 
-    pub fn get_vector(&self, device: &DeviceId, bindings: &[VectorBinding]) -> Option<[f32; 2]> {
+    pub(crate) fn get_vector(&self, device: &DeviceId, bindings: &[VectorBinding]) -> Option<[f32; 2]> {
         let device = self.devices.get(&device.0)?;
         let family = device.family();
         let digital = device.digital();
