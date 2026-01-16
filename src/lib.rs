@@ -9,6 +9,3 @@ pub use pawkit_crockford as crockford;
 
 #[cfg(feature = "internal_libraries")]
 pub use pawkit_holy_array as holy_array;
-
-#[cfg(feature = "internal_libraries")]
-pub use pawkit_bitarray as bitarray;
