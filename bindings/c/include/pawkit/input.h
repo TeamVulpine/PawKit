@@ -223,12 +223,12 @@ pawkit_input_binding_map_t pawkit_input_binding_map_create();
 void pawkit_input_binding_map_destroy(pawkit_input_binding_map_t map);
 
 pawkit_input_binding_map_t pawkit_input_binding_map_load(
-    const char *cstr,
+    char const *cstr,
     size_t len,
     pawkit_input_error_t *error
 );
 
-const char *pawkit_input_binding_map_save(
+char const *pawkit_input_binding_map_save(
     pawkit_input_binding_map_t map,
     size_t *len
 );
@@ -236,21 +236,21 @@ const char *pawkit_input_binding_map_save(
 void pawkit_input_binding_map_register_digital_binding(
     pawkit_input_binding_map_t map,
     pawkit_string_t name,
-    const pawkit_input_digital_binding_t *bindings,
+    pawkit_input_digital_binding_t const *bindings,
     size_t len
 );
 
 void pawkit_input_binding_map_register_analog_binding(
     pawkit_input_binding_map_t map,
     pawkit_string_t name,
-    const pawkit_input_analog_binding_t *bindings,
+    pawkit_input_analog_binding_t const *bindings,
     size_t len
 );
 
 void pawkit_input_binding_map_register_vector_binding(
     pawkit_input_binding_map_t map,
     pawkit_string_t name,
-    const pawkit_input_vector_binding_t *bindings,
+    pawkit_input_vector_binding_t const *bindings,
     size_t len
 );
 
