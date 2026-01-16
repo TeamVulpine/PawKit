@@ -335,7 +335,10 @@ unsafe extern "C" fn pawkit_input_binding_map_load(
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn pawkit_input_binding_map_save(map: CBindingMap, len: *mut usize) -> *const c_char {
+unsafe extern "C" fn pawkit_input_binding_map_save(
+    map: CBindingMap,
+    len: *mut usize,
+) -> *const c_char {
     unsafe {
         let Some(map) = ptr_to_ref(map) else {
             return null_mut();

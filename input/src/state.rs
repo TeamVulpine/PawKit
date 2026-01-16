@@ -204,7 +204,11 @@ impl InputState {
         }
     }
 
-    pub(crate) fn get_digital(&self, device: &DeviceId, bindings: &[DigitalBinding]) -> Option<bool> {
+    pub(crate) fn get_digital(
+        &self,
+        device: &DeviceId,
+        bindings: &[DigitalBinding],
+    ) -> Option<bool> {
         let device = self.devices.get(&device.0)?;
         let family = device.family();
         let digital = device.digital();
@@ -295,7 +299,11 @@ impl InputState {
         return Some(value);
     }
 
-    pub(crate) fn get_vector(&self, device: &DeviceId, bindings: &[VectorBinding]) -> Option<[f32; 2]> {
+    pub(crate) fn get_vector(
+        &self,
+        device: &DeviceId,
+        bindings: &[VectorBinding],
+    ) -> Option<[f32; 2]> {
         let device = self.devices.get(&device.0)?;
         let family = device.family();
         let digital = device.digital();
