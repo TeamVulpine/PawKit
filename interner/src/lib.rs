@@ -29,14 +29,14 @@ struct InternInner {
 /// Represents an interned string.
 /// Similar to an Arc<str>, but it also deduplicates strings.
 /// It is designed for fast forward lookup and cloning, with reverse lookup being prioritized over insertions / deletions.
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(PartialEq, Eq, Hash)]
 pub struct InternString {
     inner: NonNull<InternInner>,
 }
 
 /// A weak interned string.
 /// Similar to Weak<str>, but references an InternString instead
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(PartialEq, Eq, Hash)]
 pub struct WeakInternString {
     inner: NonNull<InternInner>,
 }
