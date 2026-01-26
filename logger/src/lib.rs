@@ -38,8 +38,10 @@ pub fn set_logger_callbacks(callback: Box<dyn LoggerCallbacks>) {
 
 macro log_badge($prefix: tt, $badge: tt, $start: tt, $msg: tt, $end: tt) {
     let time = time_string();
-    print_to_console(&format!(concat!(ansi!$prefix, $badge, ansi!$start, " {} | {}\n", ansi!$end), time, $msg));
-    print_to_logfile(&format!(concat!($badge, " {} | {}\n"), time, $msg));
+    let current_thread = std::thread::current();
+    let thread_name = current_thread.name().unwrap_or("unnamed");
+    print_to_console(&format!(concat!(ansi!$prefix, $badge, ansi!$start, " {} @ {} | {}\n", ansi!$end), time, thread_name, $msg));
+    print_to_logfile(&format!(concat!($badge, " {} @ {} | {}\n"), time, thread_name, $msg));
 }
 
 pub fn info(message: &str) {
