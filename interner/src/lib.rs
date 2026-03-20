@@ -1,4 +1,4 @@
-#![feature(cold_path, str_from_raw_parts)]
+#![feature(str_from_raw_parts)]
 
 use core::{fmt, str};
 use std::{

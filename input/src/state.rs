@@ -281,15 +281,27 @@ impl InputState {
         for binding in bindings {
             match binding.axis {
                 AnalogBindingKind::Keyboard(axis) if family == InputFamily::Keyboard => {
-                    value = value.max(self.get_analog_single(digital, analog, axis) * binding.scale);
+                    let mut current = self.get_analog_single(digital, analog, axis);
+                    if current < binding.deadzone {
+                        current = 0.;
+                    }
+                    value = value.max(current * binding.scale);
                 }
 
                 AnalogBindingKind::Mouse(axis) if family == InputFamily::Mouse => {
-                    value = value.max(self.get_analog_single(digital, analog, axis) * binding.scale);
+                    let mut current = self.get_analog_single(digital, analog, axis);
+                    if current < binding.deadzone {
+                        current = 0.;
+                    }
+                    value = value.max(current * binding.scale);
                 }
 
                 AnalogBindingKind::Gamepad(axis) if family == InputFamily::Gamepad => {
-                    value = value.max(self.get_analog_single(digital, analog, axis) * binding.scale);
+                    let mut current = self.get_analog_single(digital, analog, axis);
+                    if current < binding.deadzone {
+                        current = 0.;
+                    }
+                    value = value.max(current * binding.scale);
                 }
 
                 _ => continue,
@@ -315,10 +327,16 @@ impl InputState {
         for binding in bindings {
             match binding.axes {
                 VectorBindingKind::Keyboard { x, y } if family == InputFamily::Keyboard => {
-                    let current = [
+                    let mut current = [
                         self.get_analog_single(digital, analog, x) * binding.scale.0,
                         self.get_analog_single(digital, analog, y) * binding.scale.1,
                     ];
+
+                    for i in 0..2 {
+                        if current[i] < binding.deadzone {
+                            current[i] = 0.;
+                        }
+                    }
 
                     let current_len_sqr = length_squared(current);
 
@@ -329,10 +347,16 @@ impl InputState {
                 }
 
                 VectorBindingKind::Mouse { x, y } if family == InputFamily::Mouse => {
-                    let current = [
+                    let mut current = [
                         self.get_analog_single(digital, analog, x) * binding.scale.0,
                         self.get_analog_single(digital, analog, y) * binding.scale.1,
                     ];
+
+                    for i in 0..2 {
+                        if current[i] < binding.deadzone {
+                            current[i] = 0.;
+                        }
+                    }
 
                     let current_len_sqr = length_squared(current);
 
@@ -343,10 +367,16 @@ impl InputState {
                 }
 
                 VectorBindingKind::Gamepad { x, y } if family == InputFamily::Gamepad => {
-                    let current = [
+                    let mut current = [
                         self.get_analog_single(digital, analog, x) * binding.scale.0,
                         self.get_analog_single(digital, analog, y) * binding.scale.1,
                     ];
+
+                    for i in 0..2 {
+                        if current[i] < binding.deadzone {
+                            current[i] = 0.;
+                        }
+                    }
 
                     let current_len_sqr = length_squared(current);
 
