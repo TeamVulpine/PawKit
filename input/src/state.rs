@@ -282,7 +282,7 @@ impl InputState {
             match binding.axis {
                 AnalogBindingKind::Keyboard(axis) if family == InputFamily::Keyboard => {
                     let mut current = self.get_analog_single(digital, analog, axis);
-                    if current < binding.deadzone {
+                    if current.abs() < binding.deadzone {
                         current = 0.;
                     }
                     value = value.max(current * binding.scale);
@@ -290,7 +290,7 @@ impl InputState {
 
                 AnalogBindingKind::Mouse(axis) if family == InputFamily::Mouse => {
                     let mut current = self.get_analog_single(digital, analog, axis);
-                    if current < binding.deadzone {
+                    if current.abs() < binding.deadzone {
                         current = 0.;
                     }
                     value = value.max(current * binding.scale);
@@ -298,7 +298,7 @@ impl InputState {
 
                 AnalogBindingKind::Gamepad(axis) if family == InputFamily::Gamepad => {
                     let mut current = self.get_analog_single(digital, analog, axis);
-                    if current < binding.deadzone {
+                    if current.abs() < binding.deadzone {
                         current = 0.;
                     }
                     value = value.max(current * binding.scale);
@@ -333,7 +333,7 @@ impl InputState {
                     ];
 
                     for i in 0..2 {
-                        if current[i] < binding.deadzone {
+                        if current[i].abs() < binding.deadzone {
                             current[i] = 0.;
                         }
                     }
@@ -353,7 +353,7 @@ impl InputState {
                     ];
 
                     for i in 0..2 {
-                        if current[i] < binding.deadzone {
+                        if current[i].abs() < binding.deadzone {
                             current[i] = 0.;
                         }
                     }
@@ -373,7 +373,7 @@ impl InputState {
                     ];
 
                     for i in 0..2 {
-                        if current[i] < binding.deadzone {
+                        if current[i].abs() < binding.deadzone {
                             current[i] = 0.;
                         }
                     }
