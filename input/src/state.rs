@@ -199,7 +199,7 @@ impl InputState {
         TAxis: Debug + Copy + PartialEq + Serialize + Into<usize>,
     {
         match button {
-            BoundButton::Digital(button) => return digital[button.into()],
+            BoundButton::Digital { button } => return digital[button.into()],
             BoundButton::Analog { axis, threshold } => return analog[axis.into()] > threshold,
         }
     }
@@ -252,8 +252,8 @@ impl InputState {
         TAxis: Debug + Copy + PartialEq + Serialize + Into<usize>,
     {
         match axis {
-            BoundAxis::Analog(axis) => return analog[axis.into()],
-            BoundAxis::Digital(button) => return if digital[button.into()] { 1f32 } else { 0f32 },
+            BoundAxis::Analog { axis } => return analog[axis.into()],
+            BoundAxis::Digital { button } => return if digital[button.into()] { 1f32 } else { 0f32 },
             BoundAxis::MultiDigital { negative, positive } => {
                 let mut value = 0f32;
 
