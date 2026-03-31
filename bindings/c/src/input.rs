@@ -122,15 +122,16 @@ where
     unsafe {
         match button.kind {
             BOUND_BUTTON_TYPE_DIGITAL => {
-                return Some(BoundButton::Digital(
-                    TButton::try_from_primitive(button.value.button).ok()?,
-                ));
+                return Some(BoundButton::Digital {
+                    button: TButton::try_from_primitive(button.value.button).ok()?,
+                });
             }
 
             BOUND_BUTTON_TYPE_ANALOG => {
                 return Some(BoundButton::Analog {
                     axis: TAxis::try_from_primitive(button.value.analog.axis).ok()?,
                     threshold: button.value.analog.threshold,
+                    scale: 1.,
                 });
             }
 
@@ -148,15 +149,15 @@ where
     unsafe {
         match axis.kind {
             BOUND_AXIS_TYPE_ANALOG => {
-                return Some(BoundAxis::Analog(
-                    TAxis::try_from_primitive(axis.value.axis).ok()?,
-                ));
+                return Some(BoundAxis::Analog {
+                    axis: TAxis::try_from_primitive(axis.value.axis).ok()?,
+                });
             }
 
             BOUND_AXIS_TYPE_DIGITAL => {
-                return Some(BoundAxis::Digital(
-                    TButton::try_from_primitive(axis.value.button).ok()?,
-                ));
+                return Some(BoundAxis::Digital {
+                    button: TButton::try_from_primitive(axis.value.button).ok()?,
+                });
             }
 
             BOUND_AXIS_TYPE_MULTI_DIGITAL => {

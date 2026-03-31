@@ -159,7 +159,9 @@ impl InputManager {
                             continue;
                         };
 
-                        value = value.max(analog);
+                        if analog.abs() > value.abs() {
+                            value = analog;
+                        }
                     }
 
                     let old_value = frame.value;

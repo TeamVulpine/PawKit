@@ -302,6 +302,7 @@ impl InputState {
 
                 AnalogBindingKind::Mouse(axis) if family == InputFamily::Mouse => {
                     let mut current = self.get_analog_single(digital, analog, axis);
+
                     if current.abs() < binding.deadzone {
                         current = 0.;
                     }
@@ -315,6 +316,7 @@ impl InputState {
 
                 AnalogBindingKind::Gamepad(axis) if family == InputFamily::Gamepad => {
                     let mut current = self.get_analog_single(digital, analog, axis);
+
                     if current.abs() < binding.deadzone {
                         current = 0.;
                     }

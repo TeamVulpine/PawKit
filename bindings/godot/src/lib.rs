@@ -7,8 +7,8 @@ struct PawkitGodot;
 
 #[gdextension]
 unsafe impl ExtensionLibrary for PawkitGodot {
-    fn on_level_init(level: InitLevel) {
-        if level == InitLevel::Editor {
+    fn on_stage_init(stage: InitStage) {
+        if stage == InitStage::Editor {
             set_logger_callbacks(Box::new(GodotLoggerCallbacks));
         }
     }
