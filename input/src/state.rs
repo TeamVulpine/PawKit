@@ -288,10 +288,14 @@ impl InputState {
             match binding.axis {
                 AnalogBindingKind::Keyboard(axis) if family == InputFamily::Keyboard => {
                     let mut current = self.get_analog_single(digital, analog, axis);
+
                     if current.abs() < binding.deadzone {
                         current = 0.;
                     }
-                    value = value.max(current * binding.scale);
+
+                    if current.abs() * binding.scale > value.abs() {
+                        value = current * binding.scale
+                    }
                 }
 
                 AnalogBindingKind::Mouse(axis) if family == InputFamily::Mouse => {
@@ -299,7 +303,10 @@ impl InputState {
                     if current.abs() < binding.deadzone {
                         current = 0.;
                     }
-                    value = value.max(current * binding.scale);
+
+                    if current.abs() * binding.scale > value.abs() {
+                        value = current * binding.scale
+                    }
                 }
 
                 AnalogBindingKind::Gamepad(axis) if family == InputFamily::Gamepad => {
@@ -307,7 +314,10 @@ impl InputState {
                     if current.abs() < binding.deadzone {
                         current = 0.;
                     }
-                    value = value.max(current * binding.scale);
+
+                    if current.abs() * binding.scale > value.abs() {
+                        value = current * binding.scale
+                    }
                 }
 
                 _ => continue,
