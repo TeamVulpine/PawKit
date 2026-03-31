@@ -27,8 +27,14 @@ where
     TButton: Debug + Copy + PartialEq + Serialize,
     TAxis: Debug + Copy + PartialEq + Serialize,
 {
-    Analog { axis: TAxis, threshold: f32 },
-    Digital { button: TButton },
+    Analog {
+        axis: TAxis,
+        threshold: f32,
+        scale: f32,
+    },
+    Digital {
+        button: TButton,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -39,8 +45,12 @@ where
     TButton: Debug + Copy + PartialEq + Serialize,
     TAxis: Debug + Copy + PartialEq + Serialize,
 {
-    Analog { axis: TAxis },
-    Digital { button: TButton },
+    Analog {
+        axis: TAxis,
+    },
+    Digital {
+        button: TButton,
+    },
     MultiDigital {
         negative: TButton,
         positive: TButton,
