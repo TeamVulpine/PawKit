@@ -293,8 +293,10 @@ impl InputState {
                         current = 0.;
                     }
 
-                    if current.abs() * binding.scale > value.abs() {
-                        value = current * binding.scale
+                    let scaled = current * binding.scale;
+
+                    if scaled.abs() > value.abs() {
+                        value = scaled;
                     }
                 }
 
@@ -304,8 +306,10 @@ impl InputState {
                         current = 0.;
                     }
 
-                    if current.abs() * binding.scale > value.abs() {
-                        value = current * binding.scale
+                    let scaled = current * binding.scale;
+
+                    if scaled.abs() > value.abs() {
+                        value = scaled;
                     }
                 }
 
@@ -315,8 +319,10 @@ impl InputState {
                         current = 0.;
                     }
 
-                    if current.abs() * binding.scale > value.abs() {
-                        value = current * binding.scale
+                    let scaled = current * binding.scale;
+
+                    if scaled.abs() > value.abs() {
+                        value = scaled;
                     }
                 }
 

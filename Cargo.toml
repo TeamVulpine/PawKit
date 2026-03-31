@@ -19,60 +19,60 @@ members = [
 
 [workspace.dependencies]
 pawkit-net-signaling.path = "./net/signaling"
-pawkit-net-signaling.version = "0.1.18"
+pawkit-net-signaling.version = "0.1.19"
 
 pawkit-net-websocket.path = "./net/websocket"
-pawkit-net-websocket.version = "0.1.18"
+pawkit-net-websocket.version = "0.1.19"
 
 pawkit-net.path = "./net/runtime"
-pawkit-net.version = "0.1.18"
+pawkit-net.version = "0.1.19"
 
 pawkit-net-http.path = "./net/htp"
-pawkit-net-http.version = "0.1.18"
+pawkit-net-http.version = "0.1.19"
 
 pawkit-logger.path = "./logger"
-pawkit-logger.version = "0.1.18"
+pawkit-logger.version = "0.1.19"
 
 pawkit-fs.path = "./fs"
-pawkit-fs.version = "0.1.18"
+pawkit-fs.version = "0.1.19"
 
 pawkit-crockford.path = "./crockford"
-pawkit-crockford.version = "0.1.18"
+pawkit-crockford.version = "0.1.19"
 
 pawkit-holy-array.path = "./holy-array"
-pawkit-holy-array.version = "0.1.18"
+pawkit-holy-array.version = "0.1.19"
 
 pawkit-input.path = "./input"
-pawkit-input.version = "0.1.18"
+pawkit-input.version = "0.1.19"
 
 pawkit-interner.path = "./interner"
-pawkit-interner.version = "0.1.18"
+pawkit-interner.version = "0.1.19"
 
 tokio-native-tls = "0.3.1"
-num_enum = "0.7.5"
+num_enum = "0.7.6"
 serde.version = "1.0.228"
 serde.features = ["serde_derive"]
 just-webrtc = "0.2.0"
-wasm-bindgen = "0.2.106"
-wasm-bindgen-futures = "0.4.56"
-futures-util = "0.3.31"
-chrono = "0.4.42"
+wasm-bindgen = "0.2.116"
+wasm-bindgen-futures = "0.4.66"
+futures-util = "0.3.32"
+chrono = "0.4.44"
 serde_json = "1.0.148"
 ciborium = "0.2.2"
-anyhow = "1.0.100"
-bytes = "1.11.0"
-reqwest = "0.12.28"
-zip = "7.0.0"
-thiserror = "2.0.17"
+anyhow = "1.0.102"
+bytes = "1.11.1"
+reqwest = "0.13.2"
+zip = "8.4.0"
+thiserror = "2.0.18"
 dashmap = "6.1.0"
  
-godot.version = "0.4.5"
+godot.version = "0.5.0"
 godot.features = ["api-4-4", "serde"]
 
-tokio-tungstenite.version = "0.28.0"
+tokio-tungstenite.version = "0.29.0"
 tokio-tungstenite.features = ["native-tls"]
 
-web-sys.version = "0.3.83"
+web-sys.version = "0.3.93"
 web-sys.features = [
   "BinaryType",
   "Blob",
@@ -92,15 +92,15 @@ web-sys.features = [
   "Response"
 ]
 
-tokio.version = "1.48.0"
+tokio.version = "1.50.0"
 tokio.features = ["sync", "rt", "macros"]
 
-mlua.version = "0.11.5"
+mlua.version = "0.11.6"
 mlua.features = ["lua54", "module", "serialize"] 
 
 [package]
 name = "pawkit"
-version = "0.1.18"
+version = "0.1.19"
 edition = "2024"
 license = "MPL-2.0"
 homepage = "https://teamvulpine.com"
