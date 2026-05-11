@@ -12,7 +12,7 @@ use just_webrtc::{
     types::{DataChannelOptions, PeerConnectionState},
 };
 use pawkit_net_signaling::{
-    ChannelConfiguration, client::ClientPeerSignalingClient, model::HostId,
+    ChannelConfiguration, Reliability, client::ClientPeerSignalingClient, model::HostId
 };
 use tokio::sync::{
     RwLock,
@@ -69,9 +69,24 @@ impl NetClientPeer {
     }
 
     fn channel_config_to_option(config: &ChannelConfiguration) -> DataChannelOptions {
+        let max_retransmits = if let Reliability::Retry(n) = config.reliability {
+            Some(n.get())
+        } else if let Reliability::Unreliable = config.reliability {
+            Some(0)
+        } else {
+            None
+        };
+
+        let max_packet_life_time = if let Reliability::ExpireAfter(deadline) = config.reliability {
+            Some(deadline.get())
+        } else {
+            None
+        };
+
         return DataChannelOptions {
             ordered: Some(config.ordered),
-            max_retransmits: config.reliability,
+            max_retransmits,
+            max_packet_life_time,
 
             ..Default::default()
         };
