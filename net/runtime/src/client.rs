@@ -12,8 +12,7 @@ use just_webrtc::{
     types::{DataChannelOptions, PeerConnectionState},
 };
 use pawkit_net_signaling::{
-    client::ClientPeerSignalingClient,
-    model::{ChannelConfiguration, HostId},
+    ChannelConfiguration, client::ClientPeerSignalingClient, model::HostId,
 };
 use tokio::sync::{
     RwLock,
@@ -28,6 +27,7 @@ pub struct NetClientPeer {
     running: AtomicBool,
     host_id: HostId,
     game_id: u32,
+    channel_configurations: Box<[ChannelConfiguration]>,
 }
 
 #[derive(Debug)]
@@ -42,6 +42,7 @@ impl NetClientPeer {
     pub fn create(
         game_id: u32,
         host_id: HostId,
+        channel_configurations: &[ChannelConfiguration],
     ) -> (Arc<Self>, UnboundedReceiver<NetClientPeerEvent>) {
         let (ev_dispatcher, ev_queue) = unbounded_channel::<NetClientPeerEvent>();
 
@@ -51,11 +52,12 @@ impl NetClientPeer {
             running: AtomicBool::new(true),
             host_id,
             game_id,
+            channel_configurations: channel_configurations.into(),
         });
 
         peer.clone().spawn_worker();
 
-        (peer, ev_queue)
+        return (peer, ev_queue);
     }
 
     pub fn send_packet(&self, channel: usize, data: &[u8]) {
@@ -79,11 +81,8 @@ impl NetClientPeer {
         let mut signaling =
             ClientPeerSignalingClient::new(&self.host_id.server_url, self.game_id).await?;
 
-        let configurations = signaling
-            .channel_configurations(self.host_id.clone())
-            .await?;
-
-        let channel_options = configurations
+        let channel_options = self
+            .channel_configurations
             .iter()
             .map(|it| ("pawkit_".to_string(), Self::channel_config_to_option(it)))
             .collect::<Vec<_>>();
@@ -114,7 +113,7 @@ impl NetClientPeer {
             return Connection::from(connection, channels).await.ok();
         }
 
-        None
+        return None;
     }
 
     async fn worker_loop(self: Arc<Self>) {
@@ -175,8 +174,12 @@ pub struct SimpleNetClientPeer {
 }
 
 impl SimpleNetClientPeer {
-    pub fn create(game_id: u32, host_id: HostId) -> Self {
-        let (raw_peer, ev_queue) = NetClientPeer::create(game_id, host_id);
+    pub fn create(
+        game_id: u32,
+        host_id: HostId,
+        channel_configurations: &[ChannelConfiguration],
+    ) -> Self {
+        let (raw_peer, ev_queue) = NetClientPeer::create(game_id, host_id, channel_configurations);
         Self { raw_peer, ev_queue }
     }
 

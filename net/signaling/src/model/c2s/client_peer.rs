@@ -12,8 +12,4 @@ pub enum ClientPeerMessageC2S {
         host_id: HostId,
         game_id: u32,
     },
-    RequestChannelConfigurations {
-        host_id: HostId,
-        game_id: u32,
-    },
 }

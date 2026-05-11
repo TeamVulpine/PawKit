@@ -14,8 +14,9 @@ use just_webrtc::{
 };
 use pawkit_holy_array::HolyArray;
 use pawkit_net_signaling::{
+    ChannelConfiguration,
     client::{ClientConnectionCandidate, HostPeerSignalingClient},
-    model::{ChannelConfiguration, HostId},
+    model::HostId,
 };
 use tokio::sync::{
     RwLock,
@@ -31,6 +32,7 @@ pub struct NetHostPeer {
     game_id: u32,
     host_id: RwLock<HostId>,
     request_proxy: bool,
+    channel_configurations: Box<[ChannelConfiguration]>,
 }
 
 #[derive(Debug)]
@@ -54,7 +56,7 @@ impl NetHostPeer {
         server_url: &str,
         game_id: u32,
         request_proxy: bool,
-        channel_configurations: Vec<ChannelConfiguration>,
+        channel_configurations: &[ChannelConfiguration],
     ) -> (Arc<Self>, UnboundedReceiver<NetHostPeerEvent>) {
         let (ev_dispatcher, ev_queue) = unbounded_channel::<NetHostPeerEvent>();
 
@@ -69,9 +71,10 @@ impl NetHostPeer {
                 shard_id: 0,
             }),
             request_proxy,
+            channel_configurations: channel_configurations.into(),
         });
 
-        value.clone().spawn_worker(channel_configurations);
+        value.clone().spawn_worker();
 
         return (value, ev_queue);
     }
@@ -141,18 +144,13 @@ impl NetHostPeer {
         return Some(peer_id);
     }
 
-    async fn refresh_signaling(
-        &self,
-        signaling: &mut HostPeerSignalingClient,
-        channel_configurations: &Vec<ChannelConfiguration>,
-    ) {
+    async fn refresh_signaling(&self, signaling: &mut HostPeerSignalingClient) {
         if !signaling.is_open() {
             {
                 let Some(new_signaling) = HostPeerSignalingClient::new(
                     &self.host_id.read().await.server_url,
                     self.game_id,
                     self.request_proxy,
-                    channel_configurations.clone(),
                 )
                 .await
                 else {
@@ -198,14 +196,13 @@ impl NetHostPeer {
         tasks.push(Box::pin(Self::packet_task(peer.clone(), peer_id, channel)));
     }
 
-    async fn worker_loop(&self, channel_configurations: Vec<ChannelConfiguration>) {
+    async fn worker_loop(&self) {
         let mut signaling = {
             loop {
                 let Some(host) = HostPeerSignalingClient::new(
                     &self.host_id.read().await.server_url,
                     self.game_id,
                     self.request_proxy,
-                    channel_configurations.clone(),
                 )
                 .await
                 else {
@@ -223,16 +220,15 @@ impl NetHostPeer {
         let mut tasks = FuturesUnordered::<Pin<Box<PacketFuture>>>::new();
 
         while self.running.load(Ordering::Relaxed) {
-            self.refresh_signaling(&mut signaling, &channel_configurations)
-                .await;
+            self.refresh_signaling(&mut signaling).await;
 
             tokio::select! {
                 Some(candidate) = signaling.next_candidate() => {
-                    let Some(peer_id) = self.handle_candidate(&mut signaling, candidate, channel_configurations.len()).await else {
+                    let Some(peer_id) = self.handle_candidate(&mut signaling, candidate, self.channel_configurations.len()).await else {
                         continue;
                     };
 
-                    for channel in 0..channel_configurations.len() {
+                    for channel in 0..self.channel_configurations.len() {
                         self.add_packet_task(&tasks, peer_id, channel).await;
                     }
                 }
@@ -267,9 +263,9 @@ impl NetHostPeer {
         self.running.store(false, Ordering::Relaxed);
     }
 
-    fn spawn_worker(self: Arc<Self>, channel_configurations: Vec<ChannelConfiguration>) {
+    fn spawn_worker(self: Arc<Self>) {
         tokio::spawn(async move {
-            self.worker_loop(channel_configurations).await;
+            self.worker_loop().await;
         });
     }
 }
@@ -284,7 +280,7 @@ impl SimpleNetHostPeer {
         server_url: &str,
         game_id: u32,
         request_proxy: bool,
-        channel_configurations: Vec<ChannelConfiguration>,
+        channel_configurations: &[ChannelConfiguration],
     ) -> Self {
         let (raw_peer, ev_queue) =
             NetHostPeer::create(server_url, game_id, request_proxy, channel_configurations);
