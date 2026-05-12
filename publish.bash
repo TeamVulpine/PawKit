@@ -11,7 +11,7 @@ if [[ $# -ne 1 ]]; then
 fi
 
 MODE="$1"
-VERSION="0.1.22"
+VERSION="0.1.23"
 WORKSPACE_TOML="Cargo.toml"
 
 # Ordered crate list
@@ -36,8 +36,8 @@ CRATES=(
 # Crates to exclude from publishing only
 EXCLUDE_FROM_PUBLISH=(
   "pawkit-bindings-godot"
-  "pawkit-c"
-  "pawkit-lua"
+  "pawkit-bindings-c"
+  "pawkit-bindings-lua"
 )
 
 is_excluded_from_publish() {

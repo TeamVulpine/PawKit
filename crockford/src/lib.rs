@@ -5,7 +5,8 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use rand::RngCore;
+use rand::Rng;
+use serde::{Deserialize, Deserializer, Serialize};
 
 pub const CROCKFORD_DIGITS: &[u8] = b"0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
@@ -211,5 +212,36 @@ impl FromCrockford for Ulid {
         let random = u128::from_crockford(random)?;
 
         return Some(Self::from_raw_parts(timestamp, random));
+    }
+}
+
+impl Serialize for Ulid {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        if serializer.is_human_readable() {
+            return self.into_crockford(0).serialize(serializer);
+        }
+
+        return self.into_raw_parts().serialize(serializer);
+    }
+}
+
+impl<'de> Deserialize<'de> for Ulid {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        if deserializer.is_human_readable() {
+            let value = String::deserialize(deserializer)?;
+
+            return Ulid::from_crockford(&value)
+                .ok_or_else(|| serde::de::Error::custom("invalid ULID string"));
+        }
+
+        let (timestamp, random) = <(u128, u128)>::deserialize(deserializer)?;
+
+        return Ok(Ulid::from_raw_parts(timestamp, random));
     }
 }

@@ -12,7 +12,7 @@ use just_webrtc::{
     types::{DataChannelOptions, PeerConnectionState},
 };
 use pawkit_net_signaling::{
-    ChannelConfiguration, Reliability, client::ClientPeerSignalingClient, model::HostId
+    ChannelConfiguration, Reliability, client::ClientPeerSignalingClient, model::HostId,
 };
 use tokio::sync::{
     RwLock,
