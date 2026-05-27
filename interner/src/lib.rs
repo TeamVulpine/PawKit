@@ -18,6 +18,8 @@ use std::{
 use dashmap::{DashMap, Entry};
 use serde::{Deserialize, Serialize, de::Visitor};
 
+pub mod lazy;
+
 const MAX_REFCOUNT: usize = (isize::MAX) as usize;
 
 struct InternInner {
