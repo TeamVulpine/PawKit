@@ -47,25 +47,37 @@ pub struct Vfs {
 
 impl Vfs {
     fn parse_subdirectory<S: Deref<Target = str>>(subdirectory: S) -> Option<Box<str>> {
-        let mut data = subdirectory.split('/').collect::<Vec<_>>();
+        let absolute = subdirectory.starts_with('/');
 
-        data.retain(|it| !it.is_empty() && *it != ".");
+        let mut components = Vec::new();
 
-        let mut dirrectory = vec![];
-
-        for value in data {
-            if value == ".." {
-                dirrectory.pop();
-            } else {
-                dirrectory.push(value);
+        for part in subdirectory.split('/') {
+            match part {
+                "" | "." => {}
+                ".." => {
+                    components.pop();
+                }
+                _ => components.push(part),
             }
         }
 
-        if dirrectory.is_empty() {
-            return None;
+        if components.is_empty() {
+            return if absolute {
+                Some("/".into())
+            } else {
+                None
+            };
         }
 
-        return Some(dirrectory.join("/").into_boxed_str());
+        let mut out = String::new();
+
+        if absolute {
+            out.push('/');
+        }
+
+        out.push_str(&components.join("/"));
+
+        return Some(out.into_boxed_str());
     }
 
     fn from_kind<S: Deref<Target = str>>(
