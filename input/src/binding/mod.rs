@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 use crate::binding::{
@@ -19,13 +20,19 @@ pub(self) macro implement_into($ty:ty) {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-#[serde(bound = "TButton: for<'a> Deserialize<'a>, TAxis: for<'a> Deserialize<'a>")]
-#[serde(tag = "mode")]
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    serde(
+        bound = "TButton: Serialize + for<'a> Deserialize<'a>, TAxis: Serialize + for<'a> Deserialize<'a>"
+    )
+)]
+#[cfg_attr(feature = "serde", serde(tag = "mode"))]
 pub enum BoundButton<TButton, TAxis>
 where
-    TButton: Debug + Copy + PartialEq + Serialize,
-    TAxis: Debug + Copy + PartialEq + Serialize,
+    TButton: Debug + Copy + PartialEq,
+    TAxis: Debug + Copy + PartialEq,
 {
     Analog {
         axis: TAxis,
@@ -37,13 +44,19 @@ where
     },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-#[serde(bound = "TButton: for<'a> Deserialize<'a>, TAxis: for<'a> Deserialize<'a>")]
-#[serde(tag = "mode")]
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    serde(
+        bound = "TButton: Serialize + for<'a> Deserialize<'a>, TAxis: Serialize + for<'a> Deserialize<'a>"
+    )
+)]
+#[cfg_attr(feature = "serde", serde(tag = "mode"))]
 pub enum BoundAxis<TButton, TAxis>
 where
-    TButton: Debug + Copy + PartialEq + Serialize,
-    TAxis: Debug + Copy + PartialEq + Serialize,
+    TButton: Debug + Copy + PartialEq,
+    TAxis: Debug + Copy + PartialEq,
 {
     Analog {
         axis: TAxis,
@@ -57,32 +70,36 @@ where
     },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "family")]
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(tag = "family"))]
 pub enum DigitalBinding {
     Keyboard(BoundButton<KeyboardButton, KeyboardAxis>),
     Mouse(BoundButton<MouseButton, MouseAxis>),
     Gamepad(BoundButton<GamepadButton, GamepadAxis>),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "family")]
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(tag = "family"))]
 pub enum AnalogBindingKind {
     Keyboard(BoundAxis<KeyboardButton, KeyboardAxis>),
     Mouse(BoundAxis<MouseButton, MouseAxis>),
     Gamepad(BoundAxis<GamepadButton, GamepadAxis>),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct AnalogBinding {
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     pub axis: AnalogBindingKind,
     pub deadzone: f32,
     pub scale: f32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "family")]
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(tag = "family"))]
 pub enum VectorBindingKind {
     Keyboard {
         x: BoundAxis<KeyboardButton, KeyboardAxis>,
@@ -98,23 +115,26 @@ pub enum VectorBindingKind {
     },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct VectorBinding {
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     pub axes: VectorBindingKind,
     pub deadzone: f32,
     pub scale: (f32, f32),
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "type", content = "bindings")]
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(tag = "type", content = "bindings"))]
 pub enum BindingList {
     Digital(Vec<DigitalBinding>),
     Analog(Vec<AnalogBinding>),
     Vector(Vec<VectorBinding>),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum BindingKind {
     Digital,
     Analog,

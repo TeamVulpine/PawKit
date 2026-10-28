@@ -1,10 +1,10 @@
 [package]
 name = "pawkit-fs"
-version = "0.1.25"
-edition = "2024"
-license = "MPL-2.0"
-homepage = "https://teamvulpine.com"
-repository = "https://github.com/TeamVulpine/PawKit/tree/main/fs"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
 description = "PawKit's filesystem module"
 
 [lib]
@@ -12,6 +12,6 @@ crate-type = ["staticlib", "rlib"]
 
 [dependencies]
 pawkit-logger.workspace = true
-thiserror.workspace = true
 
+thiserror.workspace = true
 zip.workspace = true

@@ -55,7 +55,11 @@ impl VfsListFiles {
             };
             *index += 1;
 
-            let name = file.name();
+            let name = match file.name() {
+                Ok(name) => name,
+                Err(err) => return Some(Err(VfsError::ZipError(err))),
+            };
+
             let prefix: &str = &prefix;
             if name.starts_with(prefix) {
                 let remaining = &name[prefix.len()..];

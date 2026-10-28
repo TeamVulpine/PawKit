@@ -1,79 +1,45 @@
 [workspace]
 resolver = "2"
 
-members = [
-  "logger",
-  "interner",
-  "net/signaling",
-  "net/runtime",
-  "net/websocket",
-  "net/http",
-  "fs",
-  "crockford",
-  "holy-array",
-  "input",
-  "bindings/c",
-  "bindings/lua",
-  "bindings/godot",
-]
+members = ["logger", "interner", "fs", "crockford", "input"]
+
+[workspace.package]
+version = "0.1.26"
+edition = "2024"
+license = "MPL-2.0"
+homepage = "https://teamvulpine.com"
+repository = "https://github.com/TeamVulpine/PawKit"
 
 [workspace.dependencies]
-pawkit-net-signaling.path = "./net/signaling"
-pawkit-net-signaling.version = "0.1.25"
-
-pawkit-net-websocket.path = "./net/websocket"
-pawkit-net-websocket.version = "0.1.25"
-
-pawkit-net.path = "./net/runtime"
-pawkit-net.version = "0.1.25"
-
-pawkit-net-http.path = "./net/htp"
-pawkit-net-http.version = "0.1.25"
-
 pawkit-logger.path = "./logger"
-pawkit-logger.version = "0.1.25"
+pawkit-logger.version = "0.1.26"
 
 pawkit-fs.path = "./fs"
-pawkit-fs.version = "0.1.25"
+pawkit-fs.version = "0.1.26"
 
 pawkit-crockford.path = "./crockford"
-pawkit-crockford.version = "0.1.25"
-
-pawkit-holy-array.path = "./holy-array"
-pawkit-holy-array.version = "0.1.25"
+pawkit-crockford.version = "0.1.26"
 
 pawkit-input.path = "./input"
-pawkit-input.version = "0.1.25"
+pawkit-input.version = "0.1.26"
 
 pawkit-interner.path = "./interner"
-pawkit-interner.version = "0.1.25"
+pawkit-interner.version = "0.1.26"
 
-tokio-native-tls = "0.3.1"
 num_enum = "0.7.6"
-serde.version = "1.0.228"
+serde.version = "1.0.229"
 serde.features = ["serde_derive"]
-just-webrtc = "0.2.0"
-wasm-bindgen = "0.2.121"
-wasm-bindgen-futures = "0.4.71"
-futures-util = "0.3.32"
-chrono = "0.4.44"
-serde_json = "1.0.148"
-ciborium = "0.2.2"
-anyhow = "1.0.102"
-bytes = "1.11.1"
-reqwest = "0.13.3"
-zip = "8.6.0"
-thiserror = "2.0.18"
-dashmap = "6.1.0"
-rand = "0.10.1"
- 
-godot.version = "0.5.2"
-godot.features = ["api-4-4", "serde"]
+wasm-bindgen = "0.2.129"
+futures-util = "0.3.34"
+chrono = "0.4.45"
+anyhow = "1.0.104"
+zip = "9.1.3"
+thiserror = "2.0.21"
+dashmap = "6.2.1"
+rand = "0.10.3"
+bitvec = "1.1.1"
 
-tokio-tungstenite.version = "0.29.0"
-tokio-tungstenite.features = ["native-tls"]
-
-web-sys.version = "0.3.98"
+web-sys.version = "0.3.106"
 web-sys.features = [
   "BinaryType",
   "Blob",
@@ -90,27 +56,20 @@ web-sys.features = [
   "IdbRequest",
   "IdbCursorWithValue",
   "Window",
-  "Response"
+  "Response",
 ]
-
-tokio.version = "1.52.3"
-tokio.features = ["sync", "rt", "macros"]
-
-mlua.version = "0.11.6"
-mlua.features = ["lua54", "module", "serialize"] 
 
 [package]
 name = "pawkit"
-version = "0.1.25"
-edition = "2024"
-license = "MPL-2.0"
-homepage = "https://teamvulpine.com"
-repository = "https://github.com/TeamVulpine/PawKit"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
 description = "PawKit is a mninimal game engine toolkit, written in Rust, with support for C, C++, Godot, and Lua."
 
 [dependencies]
 pawkit-logger.workspace = true
-pawkit-net.workspace = true
 pawkit-input.workspace = true
 pawkit-interner.workspace = true
 pawkit-fs.workspace = true
@@ -118,8 +77,11 @@ pawkit-fs.workspace = true
 pawkit-crockford.workspace = true
 pawkit-crockford.optional = true
 
-pawkit-holy-array.workspace = true
-pawkit-holy-array.optional = true
-
 [features]
-internal_libraries = ["pawkit-crockford", "pawkit-holy-array"]
+default = ["serde"]
+internal_libraries = ["pawkit-crockford"]
+serde = [
+  "pawkit-input/serde",
+  "pawkit-interner/serde",
+  "pawkit-crockford?/serde",
+]

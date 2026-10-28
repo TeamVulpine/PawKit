@@ -1,12 +1,17 @@
 [package]
 name = "pawkit-crockford"
-version = "0.1.25"
-edition = "2024"
-license = "MPL-2.0"
-homepage = "https://teamvulpine.com"
-repository = "https://github.com/TeamVulpine/PawKit/tree/main/crockford"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
 description = "A small library for serializing to/from Crockford Base32"
 
 [dependencies]
 rand.workspace = true
 serde.workspace = true
+serde.optional = true
+
+[features]
+default = ["serde"]
+serde = ["dep:serde"]

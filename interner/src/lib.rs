@@ -16,6 +16,7 @@ use std::{
 };
 
 use dashmap::{DashMap, Entry};
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize, de::Visitor};
 
 pub mod lazy;
@@ -152,38 +153,56 @@ impl InternString {
     /// Creates a new intern string from the provided string
     /// If an intern string exists with the same content, it returns a clone of that.
     pub fn new(s: &str) -> Self {
-        if let Some(weak) = DATA.get(s) {
-            let value = Self { inner: weak.inner };
-
-            value.inner().strong.fetch_add(1, Ordering::Relaxed);
-
-            return value;
-        }
-
-        let (ptr, str) = unsafe { InternInner::alloc(s) };
-
-        match DATA.entry(str) {
-            Entry::Occupied(occupied) => {
-                cold_path();
-
-                unsafe {
-                    InternInner::dealloc(ptr);
+        loop {
+            // When dropping an intern string, it holds a handle to the entry,
+            // ensuring that the strong count will be in a safe state when we acquire it
+            if let Some(weak) = DATA.get(s) {
+                if let Some(value) = weak.into_strong() {
+                    return value;
                 }
 
-                let value = Self {
-                    inner: occupied.get().inner,
-                };
+                cold_path();
 
-                value.inner().strong.fetch_add(1, Ordering::Relaxed);
-
-                return value;
+                // The allocation is dying, we should retry.
+                // In theory, this shouldn't be reachable,
+                // but there might be an edge case I haven't accounted for where it is.
+                continue;
             }
-            Entry::Vacant(vacant) => {
-                vacant.insert(WeakInternString { inner: ptr });
 
-                let value = Self { inner: ptr };
+            let (ptr, str) = unsafe { InternInner::alloc(s) };
 
-                return value;
+            match DATA.entry(str) {
+                // If a thread created a new intern string by the time we get here,
+                // we want to deallocate ours and return theirs.
+                Entry::Occupied(occupied) => {
+                    cold_path();
+
+                    let value = occupied.get().into_strong();
+
+                    drop(occupied);
+
+                    unsafe {
+                        InternInner::dealloc(ptr);
+                    }
+
+                    if let Some(value) = value {
+                        return value;
+                    }
+
+                    cold_path();
+
+                    // The allocation is dying, we should retry.
+                    // In theory, this shouldn't be reachable,
+                    // but there might be an edge case I haven't accounted for where it is.
+                    continue;
+                }
+                Entry::Vacant(vacant) => {
+                    vacant.insert(WeakInternString { inner: ptr });
+
+                    let value = Self { inner: ptr };
+
+                    return value;
+                }
             }
         }
     }
@@ -218,15 +237,10 @@ impl WeakInternString {
         return self.inner().strong.load(Ordering::Acquire) != 0;
     }
 
-    /// Gets the underlying string if it's still alive
-    pub fn as_str<'a>(&'a self) -> Option<&'a str> {
-        if !self.is_alive() {
-            return None;
-        }
-
-        unsafe {
-            return Some(InternInner::data(self.inner));
-        }
+    /// Invokes the function if the underlying allocation is still alive.
+    pub fn with_str<R>(&self, f: impl FnOnce(&str) -> R) -> Option<R> {
+        let strong = self.into_strong()?;
+        return Some(f(strong.as_str()));
     }
 
     /// Converts to a strong reference if the string is still alive
@@ -242,7 +256,7 @@ impl WeakInternString {
 
         self.inner()
             .strong
-            .fetch_update(Ordering::Acquire, Ordering::Relaxed, checked_increment)
+            .try_update(Ordering::Acquire, Ordering::Relaxed, checked_increment)
             .ok()?;
 
         return Some(InternString { inner: self.inner });
@@ -257,13 +271,30 @@ unsafe impl Sync for WeakInternString {}
 
 impl Drop for InternString {
     fn drop(&mut self) {
-        if self.inner().strong.fetch_sub(1, Ordering::Release) != 1 {
+        // SAFETY: The allocation remains alive through `self` for this method.
+        // The weak reference held by the map keeps it alive at least until the map removes the key
+        let key: &'static str = unsafe { std::mem::transmute(self.as_str()) };
+
+        let Entry::Occupied(entry) = DATA.entry(key) else {
+            unreachable!("A strong handle should always have a corresponding map entry")
+        };
+
+        let old = self.inner().strong.fetch_sub(1, Ordering::Release);
+
+        if old != 1 {
             return;
         }
 
         self.inner().strong.load(Ordering::Acquire);
 
-        DATA.remove(self.as_str());
+        if ptr::addr_eq(entry.get().inner.as_ptr(), self.inner.as_ptr()) {
+            debug_assert!(
+                ptr::addr_eq(entry.get().inner.as_ptr(), self.inner.as_ptr()),
+                "InternString allocation does not match its map entry",
+            );
+
+            drop(entry.remove());
+        }
     }
 }
 
@@ -323,11 +354,7 @@ impl PartialEq<&str> for InternString {
 
 impl PartialEq<&str> for WeakInternString {
     fn eq(&self, other: &&str) -> bool {
-        let Some(str) = self.as_str() else {
-            return false;
-        };
-
-        return str == *other;
+        return self.with_str(|it| it == *other).unwrap_or(false);
     }
 }
 
@@ -355,21 +382,17 @@ impl Debug for WeakInternString {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut t = f.debug_tuple("WeakInternString");
 
-        let Some(s) = self.as_str() else {
-            return t.field(&"<dead>").finish();
-        };
-
-        return t.field(&s).finish();
+        return self
+            .with_str(|s| t.field(&s).finish())
+            .unwrap_or_else(|| t.field(&"<dead>").finish());
     }
 }
 
 impl Display for WeakInternString {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let Some(s) = self.as_str() else {
-            return f.write_str(&"<dead>");
-        };
-
-        return f.write_str(&s);
+        return self
+            .with_str(|s| f.write_str(s))
+            .unwrap_or_else(|| f.write_str(&"<dead>"));
     }
 }
 
@@ -393,6 +416,7 @@ impl From<String> for InternString {
     }
 }
 
+#[cfg(feature = "serde")]
 impl Serialize for InternString {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -402,8 +426,10 @@ impl Serialize for InternString {
     }
 }
 
+#[cfg(feature = "serde")]
 struct InternStringVisitor;
 
+#[cfg(feature = "serde")]
 impl<'a> Visitor<'a> for InternStringVisitor {
     type Value = InternString;
 
@@ -452,6 +478,7 @@ impl<'a> Visitor<'a> for InternStringVisitor {
     }
 }
 
+#[cfg(feature = "serde")]
 impl<'de> Deserialize<'de> for InternString {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -486,12 +513,12 @@ mod tests {
         let w1 = s1.into_weak();
 
         assert!(w1.is_alive());
-        assert_eq!(w1.as_str(), Some("weak_test"));
+        assert_eq!(w1.with_str(|s| assert_eq!(s, "weak_test")), Some(()));
 
         drop(s1);
 
         assert!(!w1.is_alive());
-        assert_eq!(w1.as_str(), None);
+        assert_eq!(w1.with_str(|_| unreachable!()), None);
     }
 
     #[test]
@@ -582,7 +609,7 @@ mod tests {
         handle.join().unwrap();
 
         assert!(!w.is_alive());
-        assert_eq!(w.as_str(), None);
+        assert_eq!(w.with_str(|_| unreachable!()), None);
     }
 
     #[test]
@@ -626,5 +653,132 @@ mod tests {
         drop(s2);
 
         assert!(w.into_strong().is_none());
+    }
+
+    #[test]
+    fn hammer_interning_concurrency() {
+        const THREADS: usize = 8;
+        const ROUNDS: usize = 5_000;
+        const UPGRADE_ATTEMPTS: usize = 64;
+
+        let barrier = Arc::new(Barrier::new(THREADS));
+
+        thread::scope(|scope| {
+            for thread_id in 0..THREADS {
+                let barrier = Arc::clone(&barrier);
+
+                scope.spawn(move || {
+                    for round in 0..ROUNDS {
+                        // All threads use the same key during each round.
+                        // Rotating keys also exercises independent map entries.
+                        let key = format!("hammer-{}", round % 16);
+
+                        let value = InternString::new(&key);
+                        let ptr = value.inner.as_ptr();
+
+                        // Keep all strong handles alive simultaneously.
+                        barrier.wait();
+
+                        // The map must point to the same allocation that we acquired.
+                        let entry = DATA
+                            .get(key.as_str())
+                            .expect("interned string missing from map");
+
+                        assert!(
+                            ptr::addr_eq(entry.inner.as_ptr(), ptr),
+                            "thread {thread_id}, round {round}: map points to another allocation"
+                        );
+
+                        drop(entry);
+
+                        // Exercise strong cloning and weak-reference creation.
+                        let cloned = value.clone();
+                        let weak = value.into_weak();
+                        let weak_clone = weak.clone();
+
+                        assert!(ptr::addr_eq(cloned.inner.as_ptr(), ptr));
+                        assert!(weak.is_alive());
+
+                        for _ in 0..UPGRADE_ATTEMPTS {
+                            let upgraded = weak_clone
+                                .into_strong()
+                                .expect("upgrade failed while strong handles were alive");
+
+                            assert!(ptr::addr_eq(upgraded.inner.as_ptr(), ptr));
+                            assert_eq!(upgraded.as_str(), key);
+
+                            drop(upgraded);
+                        }
+
+                        drop(weak_clone);
+                        drop(cloned);
+                        drop(value);
+
+                        // Every thread has dropped its strong handles before proceeding.
+                        barrier.wait();
+
+                        assert!(
+                            !weak.is_alive(),
+                            "thread {thread_id}, round {round}: weak reference stayed alive"
+                        );
+
+                        assert!(weak.into_strong().is_none());
+
+                        drop(weak);
+                    }
+                });
+            }
+        });
+    }
+
+    #[test]
+    fn hammer_weak_upgrade() {
+        const THREADS: usize = 16;
+        const ATTEMPTS: usize = 100_000;
+
+        let barrier = Arc::new(Barrier::new(THREADS + 1));
+
+        let value = InternString::new("hammer-weak-drop-race");
+        let weak = value.into_weak();
+
+        thread::scope(|scope| {
+            // This thread owns the original strong handle and drops it as
+            // the other threads begin attempting weak upgrades.
+            let owner_barrier = Arc::clone(&barrier);
+
+            scope.spawn(move || {
+                owner_barrier.wait();
+                drop(value);
+            });
+
+            for thread_id in 0..THREADS {
+                let barrier = Arc::clone(&barrier);
+                let weak = weak.clone();
+
+                scope.spawn(move || {
+                    barrier.wait();
+
+                    for attempt in 0..ATTEMPTS {
+                        match weak.into_strong() {
+                            Some(strong) => {
+                                assert_eq!(
+                                    strong.as_str(),
+                                    "hammer-weak-drop-race",
+                                    "thread {thread_id}, attempt {attempt}"
+                                );
+                            }
+                            None => break,
+                        }
+
+                        if attempt % 64 == 0 {
+                            thread::yield_now();
+                        }
+                    }
+                });
+            }
+        });
+
+        assert!(!weak.is_alive());
+        assert!(weak.into_strong().is_none());
     }
 }

@@ -1,9 +1,12 @@
 use num_enum::TryFromPrimitive;
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 use crate::binding::implement_into;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
 pub enum KeyboardAxis {}
 
 impl TryFromPrimitive for KeyboardAxis {
@@ -21,7 +24,9 @@ impl TryFromPrimitive for KeyboardAxis {
 implement_into!(KeyboardAxis);
 
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TryFromPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, TryFromPrimitive)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
 pub enum MouseAxis {
     DeltaX,
     DeltaY,
@@ -32,7 +37,9 @@ pub enum MouseAxis {
 implement_into!(MouseAxis);
 
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TryFromPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, TryFromPrimitive)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
 pub enum GamepadAxis {
     LeftX,
     LeftY,

@@ -2,10 +2,13 @@
 
 use std::{
     fmt::Debug,
+    str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
 
 use rand::Rng;
+
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Deserializer, Serialize};
 
 pub const CROCKFORD_DIGITS: &[u8] = b"0123456789ABCDEFGHJKMNPQRSTVWXYZ";
@@ -158,14 +161,16 @@ impl Ulid {
     pub fn random_bytes(&self) -> &[u8] {
         return &self.0[6..];
     }
+
+    pub fn to_ulid_string(&self) -> String {
+        let value = u128::from_be_bytes(self.0);
+        return value.into_crockford(26);
+    }
 }
 
 impl Debug for Ulid {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        return f
-            .debug_tuple("Ulid")
-            .field(&self.into_crockford(26))
-            .finish();
+        return f.debug_tuple("Ulid").field(&self.to_string()).finish();
     }
 }
 
@@ -193,41 +198,46 @@ impl From<[u8; 16]> for Ulid {
     }
 }
 
-impl IntoCrockford for Ulid {
-    fn into_crockford(&self, _: usize) -> String {
-        let (timestamp, random) = self.into_raw_parts();
-
-        return timestamp.into_crockford(10) + &random.into_crockford(16);
+impl std::fmt::Display for Ulid {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        return f.write_str(&self.to_ulid_string());
     }
 }
 
-impl FromCrockford for Ulid {
-    fn from_crockford(value: &str) -> Option<Self>
-    where
-        Self: Sized,
-    {
-        let (timestamp, random) = value.split_at_checked(10)?;
+pub enum UlidFromStrError {
+    InvalidCrockford,
+    InvalidLength,
+}
 
-        let timestamp = u128::from_crockford(timestamp)?;
-        let random = u128::from_crockford(random)?;
+impl FromStr for Ulid {
+    type Err = UlidFromStrError;
 
-        return Some(Self::from_raw_parts(timestamp, random));
+    fn from_str(value: &str) -> Result<Self, UlidFromStrError> {
+        if value.len() != 26 {
+            return Err(UlidFromStrError::InvalidLength);
+        }
+
+        let value = u128::from_crockford(value).ok_or(UlidFromStrError::InvalidCrockford)?;
+
+        return Ok(Self(value.to_be_bytes()));
     }
 }
 
+#[cfg(feature = "serde")]
 impl Serialize for Ulid {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
         if serializer.is_human_readable() {
-            return self.into_crockford(0).serialize(serializer);
+            return self.to_ulid_string().serialize(serializer);
         }
 
-        return self.into_raw_parts().serialize(serializer);
+        return self.0.serialize(serializer);
     }
 }
 
+#[cfg(feature = "serde")]
 impl<'de> Deserialize<'de> for Ulid {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -236,12 +246,12 @@ impl<'de> Deserialize<'de> for Ulid {
         if deserializer.is_human_readable() {
             let value = String::deserialize(deserializer)?;
 
-            return Ulid::from_crockford(&value)
-                .ok_or_else(|| serde::de::Error::custom("invalid ULID string"));
+            return Ulid::from_str(&value)
+                .map_err(|_| serde::de::Error::custom("invalid ULID string"));
         }
 
-        let (timestamp, random) = <(u128, u128)>::deserialize(deserializer)?;
+        let value = <[u8; 16]>::deserialize(deserializer)?;
 
-        return Ok(Ulid::from_raw_parts(timestamp, random));
+        return Ok(Ulid(value));
     }
 }

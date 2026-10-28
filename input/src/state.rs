@@ -2,7 +2,6 @@ use std::{collections::HashMap, fmt::Debug};
 
 use bitvec::{array::BitArray, slice::BitSlice};
 use pawkit_crockford::Ulid;
-use serde::Serialize;
 
 use crate::{
     DeviceId,
@@ -195,8 +194,8 @@ impl InputState {
         button: BoundButton<TButton, TAxis>,
     ) -> bool
     where
-        TButton: Debug + Copy + PartialEq + Serialize + Into<usize>,
-        TAxis: Debug + Copy + PartialEq + Serialize + Into<usize>,
+        TButton: Debug + Copy + PartialEq + Into<usize>,
+        TAxis: Debug + Copy + PartialEq + Into<usize>,
     {
         match button {
             BoundButton::Digital { button } => return digital[button.into()],
@@ -252,8 +251,8 @@ impl InputState {
         axis: BoundAxis<TButton, TAxis>,
     ) -> f32
     where
-        TButton: Debug + Copy + PartialEq + Serialize + Into<usize>,
-        TAxis: Debug + Copy + PartialEq + Serialize + Into<usize>,
+        TButton: Debug + Copy + PartialEq + Into<usize>,
+        TAxis: Debug + Copy + PartialEq + Into<usize>,
     {
         match axis {
             BoundAxis::Analog { axis } => return analog[axis.into()],

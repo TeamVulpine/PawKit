@@ -36,7 +36,7 @@ pub fn set_logger_callbacks(callback: Box<dyn LoggerCallbacks>) {
     *LOGGER_CALLBACKS.write().unwrap() = callback;
 }
 
-macro log_badge($prefix: tt, $badge: tt, $start: tt, $msg: tt, $end: tt) {
+macro log_badge($prefix: tt, $badge: tt, $start: tt, $msg: tt, $end: tt $(,)?) {
     let time = time_string();
     let current_thread = std::thread::current();
     let thread_name = current_thread.name().unwrap_or("unnamed");
@@ -64,6 +64,6 @@ pub fn fatal(message: &str) {
     log_badge!((reset, fg_red, bold), "[FATAL]", (), message, (reset));
 }
 
-pub macro log($f:ident, $first:literal $(, $rest:expr)*) {
+pub macro log($f:ident, $first:literal $(, $rest:expr)* $(,)?) {
     $crate::$f(&format!($first $(, $rest)*));
 }

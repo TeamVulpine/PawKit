@@ -1,18 +1,21 @@
 #![allow(incomplete_features)]
-#![feature(decl_macro, variant_count, generic_const_exprs)]
+#![feature(decl_macro)]
 
 use std::ops::Deref;
 
 use pawkit_crockford::Ulid;
 use pawkit_interner::InternString;
+
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 pub mod binding;
 pub mod manager;
 pub mod state;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(transparent)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct BindingName(InternString);
 
 #[repr(C)]

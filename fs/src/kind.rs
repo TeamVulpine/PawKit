@@ -37,8 +37,10 @@ impl VfsKind {
 
                 for i in 0..zip.len() {
                     if let Ok(file) = zip.by_index(i) {
-                        if file.name().starts_with(&prefix) {
-                            return true;
+                        if let Ok(name) = file.name() {
+                            if name.starts_with(&prefix) {
+                                return true;
+                            }
                         }
                     }
                 }

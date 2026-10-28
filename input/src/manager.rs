@@ -53,7 +53,7 @@ pub enum InputFrame {
 pub struct InputManager {
     bindings: BindingMap,
     devices: Vec<DeviceId>,
-    frame_indices: im::HashMap<InternString, usize>,
+    frame_indices: HashMap<InternString, usize>,
     frames: Box<[RawInputFrame]>,
 }
 
@@ -100,7 +100,7 @@ impl InputManager {
         return Self {
             bindings,
             devices: vec![],
-            frame_indices: frame_indices.into(),
+            frame_indices,
             frames: frames.into(),
         };
     }
@@ -193,7 +193,7 @@ impl InputManager {
                     let old_value = frame.value;
 
                     frame.value = value;
-                    frame.delta = [old_value[0] - value[0], old_value[1] - value[1]];
+                    frame.delta = [value[0] - old_value[0], value[1] - old_value[1]];
                 }
             }
         }

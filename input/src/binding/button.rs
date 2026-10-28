@@ -1,12 +1,14 @@
 use num_enum::TryFromPrimitive;
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 use crate::binding::implement_into;
 
 #[repr(u8)]
 #[rustfmt::skip]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TryFromPrimitive)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, TryFromPrimitive)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
 pub enum KeyboardButton {
     A, B, C, D, E, F, G, H, I, J, K, L, M,
     N, O, P, Q, R, S, T, U, V, W, X, Y, Z,
@@ -50,8 +52,9 @@ pub enum KeyboardButton {
 implement_into!(KeyboardButton);
 
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TryFromPrimitive)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, TryFromPrimitive)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
 pub enum MouseButton {
     Left,
     Right,
@@ -63,8 +66,9 @@ pub enum MouseButton {
 implement_into!(MouseButton);
 
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TryFromPrimitive)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, TryFromPrimitive)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
 pub enum GamepadButton {
     South,
     East,

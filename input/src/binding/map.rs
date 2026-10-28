@@ -1,13 +1,15 @@
 use std::collections::HashMap;
 
 use pawkit_interner::InternString;
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 use crate::binding::{AnalogBinding, BindingKind, BindingList, DigitalBinding, VectorBinding};
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct BindingMap {
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     map: HashMap<InternString, BindingList>,
 }
 
@@ -25,14 +27,6 @@ impl BindingMap {
         };
     }
 
-    pub fn load(s: &str) -> serde_json::Result<Self> {
-        return serde_json::from_str(s);
-    }
-
-    pub fn save(&self) -> String {
-        return serde_json::to_string(self).unwrap();
-    }
-
     pub fn ensure_prototype(&mut self, prototype: &BindingMap) {
         self.map.retain(|key, _| prototype.map.contains_key(key));
 
@@ -45,11 +39,26 @@ impl BindingMap {
         }
     }
 
+    fn deduplicate_list<T: Clone + PartialEq>(list: &mut Vec<T>) {
+        list.retain({
+            let mut seen = Vec::new();
+
+            move |binding| {
+                if seen.contains(binding) {
+                    false
+                } else {
+                    seen.push(binding.clone());
+                    true
+                }
+            }
+        });
+    }
+
     pub fn register_binding(&mut self, name: InternString, mut values: BindingList) {
         match &mut values {
-            BindingList::Digital(list) => list.dedup(),
-            BindingList::Analog(list) => list.dedup(),
-            BindingList::Vector(list) => list.dedup(),
+            BindingList::Digital(list) => Self::deduplicate_list(list),
+            BindingList::Analog(list) => Self::deduplicate_list(list),
+            BindingList::Vector(list) => Self::deduplicate_list(list),
         }
 
         self.map.insert(name, values);
